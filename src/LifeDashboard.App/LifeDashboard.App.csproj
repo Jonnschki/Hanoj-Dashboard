@@ -23,6 +23,9 @@
     <MauiXamlInflator>SourceGen</MauiXamlInflator>
 
     <ApplicationTitle>Life Dashboard</ApplicationTitle>
+    <!-- Bestimmt den Datenordner unter Windows: %LOCALAPPDATA%\Hanoj\at.hanoj.lifedashboard\ (sonst "User Name"). -->
+    <Company>Hanoj</Company>
+    <Authors>Jonah Huettenberger</Authors>
     <ApplicationId>at.hanoj.lifedashboard</ApplicationId>
     <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>

@@ -1,20 +1,32 @@
-﻿namespace LifeDashboard.App;
+﻿using LifeDashboard.App.Services;
+
+namespace LifeDashboard.App;
 
 public partial class App : Application
 {
-    public App()
+    private readonly DigestScheduler _digestScheduler;
+
+    public App(DigestScheduler digestScheduler)
     {
         InitializeComponent();
+        _digestScheduler = digestScheduler;
     }
 
-    protected override Window CreateWindow(IActivationState? activationState) => new(new AppShell())
+    protected override Window CreateWindow(IActivationState? activationState)
     {
-        Title = "Life Dashboard",
+        var window = new Window(new AppShell())
+        {
+            Title = "Life Dashboard",
 
-        // Sinnvolle Mindestgröße für Windows; auf iOS ohne Wirkung.
-        MinimumWidth = 420,
-        MinimumHeight = 600,
-        Width = 1200,
-        Height = 820,
-    };
+            // Sinnvolle Mindestgröße für Windows; auf iOS ohne Wirkung.
+            MinimumWidth = 420,
+            MinimumHeight = 600,
+            Width = 1200,
+            Height = 820,
+        };
+
+        // Täglicher Digest zur eingestellten Uhrzeit (nur solange die App läuft).
+        window.Created += (_, _) => _digestScheduler.Start(window.Dispatcher);
+        return window;
+    }
 }

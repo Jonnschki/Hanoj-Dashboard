@@ -33,9 +33,15 @@ public static class MauiProgram
         // Plattformspezifische Dienste.
         builder.Services.AddSingleton<ISecureTokenStore, MauiSecureTokenStore>();
         builder.Services.AddSingleton<IUrlLauncher, MauiUrlLauncher>();
-        builder.Services.AddSingleton<INotificationService, LocalNotificationService>();
+#if WINDOWS
+        builder.Services.AddSingleton<INotificationService, Platforms.Windows.WindowsNotificationService>();
+#else
+        builder.Services.AddSingleton<INotificationService, LocalNotificationService>(); // iOS: folgt mit dem iPhone-Build
+#endif
         builder.Services.AddSingleton<SyncCoordinator>();
         builder.Services.AddSingleton<NewsCoordinator>();
+        builder.Services.AddSingleton<DigestService>();
+        builder.Services.AddSingleton<DigestScheduler>();
 
         AddPages(builder.Services);
 
