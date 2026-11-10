@@ -7,33 +7,29 @@ using Microsoft.Extensions.Options;
 namespace LifeDashboard.App.Services;
 
 /// <summary>
-/// App-weiter Zustand rund um den Sync (Kalenderauswahl, letzter Report).
+/// App-weiter Zustand rund um den Sync (Kalender, gespeicherte Nutzereinstellungen, letzter Report).
 /// Wird von Dashboard, SyncPage und Settings gemeinsam genutzt. Keine Business-Logik – die steckt in der SyncEngine.
 /// </summary>
 public sealed class SyncCoordinator(
     SyncEngine engine,
     IEnumerable<ICalendarProvider> providers,
     ISyncLedger ledger,
+    IUserSettingsStore settingsStore,
     IClock clock,
-    IOptions<SyncSettings> settings)
+    IOptions<SyncSettings> syncSettings,
+    IOptions<MarketDataOptions> marketOptions)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private IReadOnlyList<(ICalendarProvider Provider, CalendarInfo Calendar)>? _calendars;
+    private UserSettings? _userSettings;
 
     /// <summary>Wird ausgelöst, wenn ein Lauf fertig ist.</summary>
     public event EventHandler<DryRunReport>? RunCompleted;
 
     public DryRunReport? LastReport { get; private set; }
 
-    public bool IsRunning { get; private set; }
-
-    /// <summary>IDs der eigenen Kalender, die gespiegelt werden (Default: alle eigenen).</summary>
-    public HashSet<string> SelectedCalendarIds { get; } = [];
-
-    /// <summary>Zielkalender für Sport (Default: erster eigener Kalender mit "Sport" im Namen).</summary>
-    public string? ActivityTargetCalendarId { get; set; }
-
-    public SyncSettings Settings { get; } = settings.Value;
+    /// <summary>Technische Sync-Einstellungen aus appsettings.json.</summary>
+    public SyncSettings Settings { get; } = syncSettings.Value;
 
     /// <summary>Alle bekannten Kalender (eigene und fremde), gecacht.</summary>
     public async Task<IReadOnlyList<(ICalendarProvider Provider, CalendarInfo Calendar)>> GetCalendarsAsync(CancellationToken ct = default)
@@ -54,16 +50,46 @@ public sealed class SyncCoordinator(
         }
 
         _calendars = list;
-        if (SelectedCalendarIds.Count == 0)
+        return list;
+    }
+
+    /// <summary>Gespeicherte Nutzereinstellungen (gecacht).</summary>
+    public async Task<UserSettings> GetUserSettingsAsync(CancellationToken ct = default)
+        => _userSettings ??= await settingsStore.LoadAsync(ct);
+
+    /// <summary>Speichert die Nutzereinstellungen.</summary>
+    public async Task SaveUserSettingsAsync(UserSettings settings, CancellationToken ct = default)
+    {
+        await settingsStore.SaveAsync(settings, ct);
+        _userSettings = settings;
+    }
+
+    /// <summary>Watchlist: eigene aus den Einstellungen, sonst die aus appsettings.json.</summary>
+    public async Task<IReadOnlyList<string>> GetWatchlistAsync(CancellationToken ct = default)
+        => (await GetUserSettingsAsync(ct)).EffectiveWatchlist(marketOptions.Value.Watchlist);
+
+    /// <summary>
+    /// Kalender, die gespiegelt werden: gespeicherte Auswahl, oder (solange nie gespeichert) alle eigenen.
+    /// Nur eigene Kalender – fremde werden hier zusätzlich herausgefiltert.
+    /// </summary>
+    public async Task<IReadOnlySet<string>> GetSelectedCalendarIdsAsync(CancellationToken ct = default)
+    {
+        var settings = await GetUserSettingsAsync(ct);
+        var own = (await GetCalendarsAsync(ct)).Where(x => x.Calendar.IsWritable).Select(x => x.Calendar.Id).ToHashSet();
+        return settings.HasCalendarSelection ? settings.SelectedCalendarIds.Where(own.Contains).ToHashSet() : own;
+    }
+
+    /// <summary>Sport-Zielkalender: gespeicherte Wahl, sonst erster eigener Kalender mit "Sport" im Namen.</summary>
+    public async Task<string?> GetActivityTargetCalendarIdAsync(CancellationToken ct = default)
+    {
+        var settings = await GetUserSettingsAsync(ct);
+        var calendars = await GetCalendarsAsync(ct);
+        if (settings.ActivityTargetCalendarId is { } id && calendars.Any(x => x.Calendar.Id == id && x.Calendar.IsWritable))
         {
-            foreach (var (_, c) in list.Where(x => x.Item2.IsWritable))
-            {
-                SelectedCalendarIds.Add(c.Id);
-            }
+            return id;
         }
 
-        ActivityTargetCalendarId ??= list.Select(x => x.Item2).FirstOrDefault(c => c.IsWritable && c.Name.Contains("Sport", StringComparison.OrdinalIgnoreCase))?.Id;
-        return list;
+        return calendars.Select(x => x.Calendar).FirstOrDefault(c => c.IsWritable && c.Name.Contains("Sport", StringComparison.OrdinalIgnoreCase))?.Id;
     }
 
     /// <summary>Termine aller Kalender im Fenster (für Dashboard/Kalenderansicht).</summary>
@@ -82,33 +108,31 @@ public sealed class SyncCoordinator(
         return result.OrderBy(x => x.Item2.Schedule.SortKeyUtc).ToList();
     }
 
-    public async Task<SyncRunRecord?> GetLastRunAsync(CancellationToken ct = default)
-        => (await ledger.GetRecentRunsAsync(1, ct)).FirstOrDefault();
+    public async Task<IReadOnlyList<SyncRunRecord>> GetRecentRunsAsync(int count, CancellationToken ct = default)
+        => await ledger.GetRecentRunsAsync(count, ct);
 
-    /// <summary>Startet einen Lauf. Parallele Läufe werden verhindert.</summary>
+    /// <summary>Startet einen Lauf mit den gespeicherten Einstellungen. Parallele Läufe werden verhindert.</summary>
     public async Task<DryRunReport> RunAsync(bool dryRun, bool confirmDeletes, IProgress<SyncProgress>? progress, CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct);
         try
         {
-            IsRunning = true;
-            await GetCalendarsAsync(ct);
+            var settings = await GetUserSettingsAsync(ct);
+            var selected = await GetSelectedCalendarIdsAsync(ct);
+            var activityTarget = await GetActivityTargetCalendarIdAsync(ct);
             var now = clock.UtcNow;
+
             var request = new SyncRequest
             {
-                MirrorCalendarIds = SelectedCalendarIds.ToList(),
+                // Der Sport-Zielkalender wird gefüllt, aber nicht in andere Kalender gespiegelt.
+                MirrorCalendarIds = selected.Where(id => id != activityTarget).ToList(),
                 Window = DateRange.Around(now, TimeSpan.FromDays(Settings.WindowPastDays), TimeSpan.FromDays(Settings.WindowFutureDays)),
                 DryRun = dryRun,
                 ConfirmDeletes = confirmDeletes,
-                ActivityTargetCalendarId = ActivityTargetCalendarId,
+                ActivityTargetCalendarId = activityTarget,
                 ActivitiesSinceUtc = now.AddDays(-14),
+                Rules = settings.ToRules(),
             };
-
-            // Der Sport-Zielkalender wird gefüllt, aber nicht in andere Kalender gespiegelt.
-            if (ActivityTargetCalendarId is not null)
-            {
-                request = request with { MirrorCalendarIds = request.MirrorCalendarIds.Where(id => id != ActivityTargetCalendarId).ToList() };
-            }
 
             var report = await engine.RunAsync(request, progress, ct);
             LastReport = report;
@@ -117,7 +141,6 @@ public sealed class SyncCoordinator(
         }
         finally
         {
-            IsRunning = false;
             _gate.Release();
         }
     }

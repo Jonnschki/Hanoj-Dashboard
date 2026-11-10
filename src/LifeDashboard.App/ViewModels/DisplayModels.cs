@@ -49,6 +49,29 @@ public sealed record ActivityItem(string Title, string Details, string When)
         a.StartUtc.ToLocalTime().ToString("ddd dd.MM. HH:mm", CultureInfo.GetCultureInfo("de-AT")));
 }
 
+/// <summary>Auswahlmöglichkeit in einem Picker (z. B. Sport-Zielkalender).</summary>
+public sealed record CalendarOption(string Id, string Name)
+{
+    public override string ToString() => Name;
+}
+
+/// <summary>Eintrag der Sync-Historie.</summary>
+public sealed record SyncRunItem(string When, string Kind, string Summary, string Status)
+{
+    public static SyncRunItem From(SyncRunRecord r) => new(
+        r.StartedUtc.ToLocalTime().ToString("ddd dd.MM. HH:mm", CultureInfo.GetCultureInfo("de-AT")),
+        r.DryRun ? "Dry-Run" : "Sync",
+        $"{r.Created} neu · {r.Updated} aktualisiert · {r.Deleted} gelöscht · {r.Conflicts} Konflikte · {r.Errors} Fehler",
+        r.Status switch
+        {
+            SyncRunStatus.Succeeded => "OK",
+            SyncRunStatus.CompletedWithErrors => "mit Fehlern",
+            SyncRunStatus.Failed => "fehlgeschlagen",
+            SyncRunStatus.Cancelled => "abgebrochen",
+            _ => r.Status.ToString(),
+        });
+}
+
 /// <summary>Kalender in den Einstellungen (Auswahl für den Sync).</summary>
 public sealed partial class CalendarChoice(CalendarInfo calendar, bool isSelected) : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
 {

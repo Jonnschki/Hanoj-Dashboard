@@ -67,6 +67,26 @@
                 </VerticalStackLayout>
             </controls:TileView>
 
+            <controls:TileView Title="Verlauf (letzte 10 Läufe)">
+                <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding History}">
+                    <BindableLayout.EmptyView>
+                        <Label Text="Noch keine Läufe." Style="{StaticResource Muted}" />
+                    </BindableLayout.EmptyView>
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SyncRunItem">
+                            <Grid ColumnDefinitions="150,80,*" ColumnSpacing="8">
+                                <Label Text="{Binding When}" Style="{StaticResource Muted}" />
+                                <VerticalStackLayout Grid.Column="1">
+                                    <Label Text="{Binding Kind}" FontAttributes="Bold" />
+                                    <Label Text="{Binding Status}" Style="{StaticResource Badge}" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="2" Text="{Binding Summary}" Style="{StaticResource Muted}" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </controls:TileView>
+
             <controls:TileView Title="Live-Log">
                 <VerticalStackLayout Spacing="2" BindableLayout.ItemsSource="{Binding Log}">
                     <BindableLayout.ItemTemplate>
