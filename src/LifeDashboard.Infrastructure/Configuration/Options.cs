@@ -73,8 +73,11 @@ public sealed class MarketDataOptions
 
     public Uri BaseAddress { get; set; } = new("https://finnhub.io/api/v1/");
 
-    /// <summary>Watchlist-Symbole, z. B. "SPY", "QQQ", "AAPL".</summary>
-    public IReadOnlyList<string> Watchlist { get; set; } = ["SPY", "QQQ", "AAPL", "MSFT"];
+    /// <summary>
+    /// Watchlist-Symbole, z. B. "SPY", "QQQ", "AAPL". Bewusst ohne Default-Werte:
+    /// der Configuration-Binder HÄNGT Listen an bestehende Werte an, statt sie zu ersetzen.
+    /// </summary>
+    public IReadOnlyList<string> Watchlist { get; set; } = [];
 }
 
 /// <summary>Sync-Einstellungen.</summary>

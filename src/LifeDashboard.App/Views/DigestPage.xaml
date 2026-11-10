@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="LifeDashboard.App.Views.DigestPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:LifeDashboard.App.Controls"
+    xmlns:vm="clr-namespace:LifeDashboard.App.ViewModels"
+    x:DataType="vm:DigestViewModel"
+    Title="Digest">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="{OnIdiom Phone='16,12', Default='28,24'}" Spacing="16" MaximumWidthRequest="900">
+            <Label Text="Daily Digest" Style="{StaticResource PageTitle}" />
+            <Label Text="{Binding Headline}" FontAttributes="Bold" />
+
+            <HorizontalStackLayout Spacing="10">
+                <Button Text="Digest erstellen" Style="{StaticResource SecondaryButton}" Command="{Binding BuildCommand}" />
+                <Button Text="Als Benachrichtigung" Style="{StaticResource SecondaryButton}" Command="{Binding NotifyCommand}" />
+            </HorizontalStackLayout>
+
+            <controls:TileView Title="Heute">
+                <VerticalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Events}">
+                    <BindableLayout.EmptyView>
+                        <Label Text="Keine Termine heute." Style="{StaticResource Muted}" />
+                    </BindableLayout.EmptyView>
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:EventItem">
+                            <Grid ColumnDefinitions="100,*">
+                                <Label Text="{Binding When}" Style="{StaticResource Muted}" />
+                                <Label Grid.Column="1" Text="{Binding Title}" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </controls:TileView>
+
+            <controls:TileView Title="Märkte">
+                <VerticalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Quotes}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:QuoteItem">
+                            <Grid ColumnDefinitions="*,Auto,80">
+                                <Label Text="{Binding Symbol}" FontAttributes="Bold" />
+                                <Label Grid.Column="1" Text="{Binding Price}" />
+                                <Label Grid.Column="2" Text="{Binding Change}" HorizontalTextAlignment="End" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </controls:TileView>
+
+            <Label Text="{Binding Status}" Style="{StaticResource Muted}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

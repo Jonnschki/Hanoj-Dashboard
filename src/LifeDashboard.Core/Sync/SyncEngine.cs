@@ -181,7 +181,7 @@ public sealed class SyncEngine
                     }
 
                     var mirror = EventMapping.ToMirror(sourceEvent, target, level, _rules);
-                    var origin = new Origin(originKey, source.Provider, source.Id, sourceEvent.Id, sourceEvent.Schedule.SortKeyUtc, sourceEvent.LastModifiedUtc);
+                    var origin = new Origin(originKey, source.Provider, source.Id, sourceEvent.Id, sourceEvent.Schedule.SortKeyUtc, sourceEvent.LastModifiedUtc, sourceEvent.Title);
                     actions.Add(PlanUpsert(run, origin, target, mirror, entry));
                 }
             }
@@ -239,7 +239,7 @@ public sealed class SyncEngine
                 var originKey = OriginKey.ForActivity(activity.Provider, activity.Id);
                 var entry = await _ledger.FindAsync(originKey, target.Calendar.Id, ct).ConfigureAwait(false);
                 var mirror = EventMapping.FromActivity(activity, target.Calendar, run.StartedUtc);
-                var origin = new Origin(originKey, activity.Provider, null, activity.Id, activity.StartUtc, run.StartedUtc);
+                var origin = new Origin(originKey, activity.Provider, null, activity.Id, activity.StartUtc, run.StartedUtc, mirror.Title);
                 actions.Add(PlanUpsert(run, origin, target.Calendar, mirror, entry));
             }
         }
@@ -251,7 +251,7 @@ public sealed class SyncEngine
         var marked = mirror with { Origin = new OriginMarker(origin.Provider, origin.Key, hash) };
 
         SyncAction Action(SyncActionKind kind, string? existingId, string? reason = null) =>
-            new(kind, origin.Key, origin.Provider, origin.SourceCalendarId, origin.NativeId, target, marked.Title, marked, existingId, reason)
+            new(kind, origin.Key, origin.Provider, origin.SourceCalendarId, origin.NativeId, target, origin.Title, marked, existingId, reason)
             {
                 OriginStartUtc = origin.StartUtc,
                 SyncHash = hash,
@@ -403,7 +403,8 @@ public sealed class SyncEngine
 
     // ---------------------------------------------------------------- Helper types
 
-    private sealed record Origin(string Key, ProviderKind Provider, string? SourceCalendarId, string NativeId, DateTimeOffset StartUtc, DateTimeOffset ModifiedUtc);
+    // Title = Originaltitel, nur für den lokalen Report; geschrieben wird immer der Spiegelinhalt (ggf. "Beschäftigt").
+    private sealed record Origin(string Key, ProviderKind Provider, string? SourceCalendarId, string NativeId, DateTimeOffset StartUtc, DateTimeOffset ModifiedUtc, string Title);
 
     private sealed record LoadedCalendar(CalendarInfo Calendar, DateRange Range, IReadOnlyDictionary<string, CalendarEvent> Events);
 

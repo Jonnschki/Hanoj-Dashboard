@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/LifeDashboard.App/LifeDashboard.App.csproj" />
     <Project Path="src/LifeDashboard.Core/LifeDashboard.Core.csproj" />
     <Project Path="src/LifeDashboard.Infrastructure/LifeDashboard.Infrastructure.csproj" />
   </Folder>

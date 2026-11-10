@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="LifeDashboard.App.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:LifeDashboard.App.Controls"
+    xmlns:vm="clr-namespace:LifeDashboard.App.ViewModels"
+    x:DataType="vm:SettingsViewModel"
+    Title="Einstellungen">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="{OnIdiom Phone='16,12', Default='28,24'}" Spacing="16" MaximumWidthRequest="900">
+            <Label Text="Einstellungen" Style="{StaticResource PageTitle}" />
+
+            <controls:TileView Title="Konten">
+                <VerticalStackLayout Spacing="10" BindableLayout.ItemsSource="{Binding Accounts}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:AccountItem">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout>
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                    <Label Text="{Binding StatusText}" Style="{StaticResource Muted}" />
+                                </VerticalStackLayout>
+                                <Button Grid.Column="1" Text="{Binding ButtonText}" Style="{StaticResource SecondaryButton}"
+                                        Command="{Binding ToggleAccountCommand, Source={RelativeSource AncestorType={x:Type vm:SettingsViewModel}}, x:DataType=vm:SettingsViewModel}"
+                                        CommandParameter="{Binding .}" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </controls:TileView>
+
+            <controls:TileView Title="Kalender für die Spiegelung">
+                <VerticalStackLayout Spacing="10" BindableLayout.ItemsSource="{Binding Calendars}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CalendarChoice">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout>
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                    <Label Text="{Binding Role}" Style="{StaticResource Muted}" />
+                                </VerticalStackLayout>
+                                <Switch Grid.Column="1" IsToggled="{Binding IsSelected}" IsEnabled="{Binding CanSelect}" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </controls:TileView>
+
+            <controls:TileView Title="Datenschutz-Regeln">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Privat → Arbeit (und umgekehrt)" FontAttributes="Bold" />
+                    <Picker ItemsSource="{Binding DetailLevels}" SelectedItem="{Binding PrivateToWork}" />
+                    <Label Text="BusyOnly = nur „Beschäftigt“, ohne Titel und Details (Standard). Speichern folgt in Phase 1." Style="{StaticResource Muted}" />
+                </VerticalStackLayout>
+            </controls:TileView>
+
+            <controls:TileView Title="Daily Digest &amp; Watchlist">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Uhrzeit" FontAttributes="Bold" />
+                    <TimePicker Time="{Binding DigestTime}" Format="HH:mm" />
+                    <Label Text="Watchlist (kommagetrennt)" FontAttributes="Bold" />
+                    <Entry Text="{Binding Watchlist}" Placeholder="SPY, QQQ, AAPL" />
+                </VerticalStackLayout>
+            </controls:TileView>
+
+            <controls:TileView Title="Export">
+                <HorizontalStackLayout Spacing="10">
+                    <Button Text="Termine → Excel" Style="{StaticResource SecondaryButton}" Command="{Binding ExportExcelCommand}" />
+                    <Button Text="Termine → CSV" Style="{StaticResource SecondaryButton}" Command="{Binding ExportCsvCommand}" />
+                </HorizontalStackLayout>
+            </controls:TileView>
+
+            <Label Text="{Binding Status}" Style="{StaticResource Muted}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
