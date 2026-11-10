@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/LifeDashboard.Core/LifeDashboard.Core.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LifeDashboard.Core.Tests/LifeDashboard.Core.Tests.csproj" />
+  </Folder>
 </Solution>
