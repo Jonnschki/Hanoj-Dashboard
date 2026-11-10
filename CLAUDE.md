@@ -33,6 +33,12 @@ dotnet build src/LifeDashboard.App -p:EnableIos=true                       # iOS
 - Datenschutz-Default: privat ↔ Arbeit nur „Beschäftigt“ ohne Details.
 - Jede Änderung an der SyncEngine braucht einen Test in `tests/LifeDashboard.Core.Tests/Sync/`.
 
+## Persistenz
+- Schemaänderungen **nur** als neue Migration hinten an `DatabaseSchema.Migrations` anhängen, bestehende nie ändern. Eine SQL-Anweisung pro Listeneintrag.
+- Zeitpunkte als UTC-Ticks (`INTEGER`), Enums als Text speichern.
+- Neue Felder in `UserSettings` brauchen immer einen Default (alte gespeicherte JSON-Stände müssen ladbar bleiben).
+- Jede `ISyncLedger`-Implementierung muss `SyncLedgerContractTests` bestehen.
+
 ## Sicherheit
 - **Keine Secrets im Repo.** Client-IDs und Keys gehören in `src/LifeDashboard.App/appsettings.Local.json` (gitignored). `appsettings.Example.json` ist die Vorlage.
 - Tokens nur über `ISecureTokenStore` (SecureStorage), nie loggen, nie in SQLite oder Preferences.
@@ -43,7 +49,8 @@ dotnet build src/LifeDashboard.App -p:EnableIos=true                       # iOS
 - **Conventional Commits**, ein Commit pro logischem Schritt: `feat(core): …`, `fix(app): …`, `test: …`, `docs: …`, `ci: …`, `chore: …`.
 - C#: file-scoped namespaces, `sealed` als Default, Records für Domain-Daten, primäre Konstruktoren für DI.
 - Tests: xUnit, FluentAssertions **7.x** (v8 ist kommerziell lizenziert, nicht upgraden!), NSubstitute. Testnamen beschreiben Verhalten (`Syncing_twice_creates_no_duplicates`).
-- Lizenzen prüfen, bevor neue Pakete dazukommen (z. B. kein EPPlus).
+- Lizenzen und Sicherheitslücken prüfen, bevor neue Pakete dazukommen (z. B. kein EPPlus; `dotnet list package --vulnerable --include-transitive`).
+- Dateien nie mit Windows PowerShell 5 `Get-Content`/`Set-Content` umschreiben: Das zerstört Umlaute (UTF-8 ohne BOM wird als ANSI gelesen). Edit-Werkzeug oder `sed` verwenden.
 - UI-Texte auf Deutsch. Styles nur über `Resources/Styles` (keine Farben inline), hell und dunkel per `AppThemeBinding`.
 - Neue Seiten: View + ViewModel in `MauiProgram.AddPages` registrieren und in `AppShell.xaml` eintragen. iPhone verträgt maximal 5 Tabs.
 
