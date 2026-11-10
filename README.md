@@ -19,9 +19,9 @@ Voraussetzungen und iOS-Setup: [docs/SETUP.md](docs/SETUP.md).
 ## Features (Ziel)
 | # | Feature | Stand |
 |---|---|---|
-| F1 | Kalender-Sync Outlook ↔ Google (Spiegelung zwischen eigenen Kalendern) | Engine ✅, Anbieter ⏳ |
+| F1 | Kalender-Sync Outlook ↔ Google (Spiegelung zwischen eigenen Kalendern) | ✅ (Login über Einstellungen → Konten) |
 | F2 | Fremde Kalender (Kunden, Partner) **read-only** einblenden | ICS-Abo ✅ |
-| F3 | Strava → Kalender | Engine + Mapper ✅, API ⏳ |
+| F3 | Strava → Kalender | ✅ (Login über Einstellungen → Konten) |
 | F4 | On-Demand-Refresh mit Fortschritt und Protokoll | ✅ (Demo) |
 | F5 | Export Excel/CSV | Services ✅, UI teilweise |
 | F6 | Daily Digest (Termine + Märkte, Benachrichtigung) | Builder ✅, Notification ⏳ |

@@ -6,10 +6,10 @@
 | 1 | **Persistenz & Ledger**: `SqliteSyncLedger` (sqlite-net-pcl), Migrationen, Einstellungen speichern (Kalenderauswahl, Regeln, Sport-Zielkalender, Watchlist, Digest-Uhrzeit), Sync-Run-Historie | ✅ erledigt |
 | 2a | **Fremde Kalender per ICS-Abo** (read-only): Parser (Serien, Zeitzonen, Ganztags), Provider, Verwaltung in den Einstellungen, Link nur im sicheren Speicher | ✅ erledigt |
 | 2c | **Börse + News**: Yahoo Finance mit Finnhub-Fallback, Schlagzeilen aus offiziellen RSS-Feeds (AT/DE/EU/international) mit Relevanz-Ranking | ✅ erledigt |
-| 2b | **Microsoft-Auth + Outlook lesen**: MSAL (System-Browser, Token-Cache in SecureStorage), eigene Kalender via Graph (eigener Tenant, Admin-Zustimmung selbst erteilt) | ⏳ wartet auf App-Registrierung |
-| 3 | **Google-Auth + Google Calendar** lesen/schreiben (OAuth Code + PKCE, `extendedProperties.private`) | ⏳ |
-| 4 | **Sync-Engine produktiv**: Graph/Google-Writer mit Marker, Dry-Run-Bestätigungsdialog für Löschungen, Einzelabfrage vor Löschung | ⏳ |
-| 5 | **Strava-Import → Kalender**: OAuth, Paging, Token-Refresh, Rate-Limit-Handling | ⏳ |
+| 2b | **Microsoft-Auth + Outlook** lesen/schreiben: MSAL (System-Browser, Token-Cache in SecureStorage), Graph per REST, Marker als Extended Property | ✅ Code + Tests; echter Login wartet auf deine App-Registrierung |
+| 3 | **Google-Auth + Google Calendar** lesen/schreiben (OAuth Code + PKCE über 127.0.0.1, `extendedProperties.private`) | ✅ Code + Tests; echter Login wartet auf deine App-Registrierung |
+| 4 | **Sync-Engine produktiv**: Graph/Google-Writer mit Marker ✅; offen: Bestätigungsdialog für Löschungen direkt aus dem Report, Einzelabfrage vor Löschung | 🟡 |
+| 5 | **Strava-Import → Kalender**: OAuth, Paging, Token-Refresh, Rate-Limit-Handling | ✅ Code + Tests; echter Login wartet auf deine App-Registrierung |
 | 6 | **Export**: UI für Zeitraum/Typ (Termine, Sport, Sync-Log). Die Services sind bereits fertig. | ⏳ |
 | 7 | **Daily Digest**: lokale Notifications (iOS `UNUserNotificationCenter`, Windows App Notifications), Finnhub produktiv, optional Wetter | ⏳ |
 | 8 | **Polishing**: Fehlerbehandlung, Performance, Release-Builds, Serilog-File-Sink, ggf. TestFlight | ⏳ |

@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 using LifeDashboard.Core.Abstractions;
 using LifeDashboard.Core.Common;
 using LifeDashboard.Core.Domain;
-using LifeDashboard.Infrastructure.Common;
+using System.Net.Http.Json;
 
 namespace LifeDashboard.Infrastructure.Strava;
 
@@ -52,21 +52,78 @@ public static class StravaMapper
 }
 
 /// <summary>
-/// Strava-API. STUB – Umsetzung in Phase 5 (OAuth, Paging über /athlete/activities?after=..., Token-Refresh).
-/// Rate-Limits (Standard 100 Requests/15 min, 1000/Tag) werden über den Resilience-Handler
-/// (Retry mit Backoff, beachtet Retry-After bei HTTP 429) abgefangen.
+/// Strava-API: GET /athlete/activities?after=…&amp;per_page=100&amp;page=n (seitenweise, bis eine Seite leer ist).
+/// Rate-Limits (Standard 100 Requests/15 min, 1000/Tag) fängt der Resilience-Handler ab
+/// (Retry mit Backoff, beachtet Retry-After bei HTTP 429).
+/// Ist kein Strava-Konto verbunden, liefert der Provider eine leere Liste (kein Fehler).
 /// </summary>
-public sealed class StravaActivityProvider(HttpClient http, ISecureTokenStore tokens) : IActivityProvider
+public sealed class StravaActivityProvider(HttpClient http, IAccessTokenSource tokens) : IActivityProvider
 {
-    internal HttpClient Http { get; } = http;
-
-    internal ISecureTokenStore Tokens { get; } = tokens;
+    private const int PageSize = 100;
+    private const int MaxPages = 20;
 
     public ProviderKind Kind => ProviderKind.Strava;
 
-    public Task<Result<IReadOnlyList<SportActivity>>> GetActivitiesAsync(DateTimeOffset afterUtc, CancellationToken cancellationToken = default)
-        => Task.FromResult(Result.Failure<IReadOnlyList<SportActivity>>(Errors.NotImplementedYet("Strava-Import (Phase 5)")));
+    public async Task<Result<IReadOnlyList<SportActivity>>> GetActivitiesAsync(DateTimeOffset afterUtc, CancellationToken cancellationToken = default)
+    {
+        var token = await tokens.GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+        if (token.IsFailure)
+        {
+            return token.Error.Code == "auth.not_connected"
+                ? Result.Success<IReadOnlyList<SportActivity>>([])
+                : Result.Failure<IReadOnlyList<SportActivity>>(token.Error);
+        }
+
+        var result = new List<SportActivity>();
+        for (var page = 1; page <= MaxPages; page++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"athlete/activities?after={afterUtc.ToUnixTimeSeconds()}&per_page={PageSize}&page={page}");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token.Value);
+            try
+            {
+                using var response = await http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    return Result.Failure<IReadOnlyList<SportActivity>>(Errors.NotConnected("Strava"));
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return Result.Failure<IReadOnlyList<SportActivity>>(Errors.ProviderFailure("Strava", $"HTTP {(int)response.StatusCode}"));
+                }
+
+                var items = await response.Content.ReadFromJsonAsync<List<StravaActivityDto>>(cancellationToken).ConfigureAwait(false) ?? [];
+                result.AddRange(items.Select(StravaMapper.ToDomain));
+                if (items.Count < PageSize)
+                {
+                    break;
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                return Result.Failure<IReadOnlyList<SportActivity>>(Errors.ProviderFailure("Strava", $"nicht erreichbar ({ex.HttpRequestError})"));
+            }
+        }
+
+        return Result.Success<IReadOnlyList<SportActivity>>(result);
+    }
 }
 
-/// <summary>Strava-Login. STUB – Phase 5.</summary>
-public sealed class StravaAccountConnector() : NotImplementedAccountConnector(ProviderKind.Strava, "Strava-Login (Phase 5)");
+/// <summary>Strava-OAuth (kein PKCE; Client-Secret erforderlich). Athletenname kommt mit der Token-Antwort.</summary>
+public static class StravaOAuth
+{
+    public static Auth.OAuthSettings Create(string clientId, string? clientSecret) => new(
+        ProviderKind.Strava,
+        new Uri("https://www.strava.com/oauth/authorize"),
+        new Uri("https://www.strava.com/oauth/token"),
+        clientId,
+        clientSecret,
+        "read,activity:read_all",
+        UsePkce: false,
+        new Dictionary<string, string> { ["approval_prompt"] = "auto" });
+
+    public static string? AthleteName(System.Text.Json.JsonElement tokenResponse)
+        => tokenResponse.TryGetProperty("athlete", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Object
+            ? $"{(a.TryGetProperty("firstname", out var f) ? f.GetString() : null)} {(a.TryGetProperty("lastname", out var l) ? l.GetString() : null)}".Trim()
+            : null;
+}

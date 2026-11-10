@@ -20,6 +20,13 @@ public sealed class MauiSecureTokenStore : ISecureTokenStore
     }
 }
 
+/// <summary>Öffnet Login-Seiten im System-Browser (Edge/Chrome bzw. Safari).</summary>
+public sealed class MauiUrlLauncher : IUrlLauncher
+{
+    public Task OpenAsync(Uri url, CancellationToken cancellationToken = default)
+        => MainThread.InvokeOnMainThreadAsync(() => Browser.Default.OpenAsync(url, BrowserLaunchMode.External));
+}
+
 /// <summary>
 /// Lokale Benachrichtigungen. STUB – Umsetzung in Phase 7:
 /// iOS: UNUserNotificationCenter (UNCalendarNotificationTrigger für die tägliche Uhrzeit).

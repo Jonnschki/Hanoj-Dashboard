@@ -131,6 +131,7 @@ public sealed class DependencyInjectionTests
         var services = new ServiceCollection()
             .AddLogging()
             .AddSingleton(Substitute.For<ISecureTokenStore>())
+            .AddSingleton(Substitute.For<IUrlLauncher>())
             .AddLifeDashboard(config, Path.Combine(Path.GetTempPath(), $"ld-di-{Guid.NewGuid():N}.db3"));
         await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
 
@@ -155,5 +156,36 @@ public sealed class DependencyInjectionTests
         provider.GetServices<IAccountConnector>().Should().HaveCount(3);
         provider.GetRequiredService<IMarketDataProvider>().Should().BeOfType<FallbackMarketDataProvider>("Standard ist Yahoo (ohne Finnhub-Key kein Fallback)");
         provider.GetRequiredService<INewsProvider>().Feeds.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task Real_mode_wires_graph_google_ics_and_strava_without_connected_accounts()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["App:UseDemoData"] = "false" }).Build();
+        var services = new ServiceCollection()
+            .AddLogging()
+            .AddSingleton<ISecureTokenStore>(new LifeDashboard.Core.InMemory.InMemorySecureTokenStore())
+            .AddSingleton(Substitute.For<IUrlLauncher>())
+            .AddLifeDashboard(config, Path.Combine(Path.GetTempPath(), $"ld-di-{Guid.NewGuid():N}.db3"));
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+        var calendarProviders = provider.GetServices<ICalendarProvider>().ToList();
+        calendarProviders.Select(p => p.Kind).Should().BeEquivalentTo([ProviderKind.Microsoft, ProviderKind.Google, ProviderKind.Ics]);
+        provider.GetRequiredService<IActivityProvider>().Should().BeOfType<LifeDashboard.Infrastructure.Strava.StravaActivityProvider>();
+
+        // Ohne verbundene Konten: keine Kalender, kein Fehler, und ein Sync läuft sauber durch.
+        foreach (var p in calendarProviders)
+        {
+            (await p.GetCalendarsAsync()).IsSuccess.Should().BeTrue();
+        }
+
+        var report = await provider.GetRequiredService<SyncEngine>().RunAsync(new SyncRequest
+        {
+            MirrorCalendarIds = [],
+            Window = DateRange.Around(DateTimeOffset.UtcNow, TimeSpan.FromDays(1), TimeSpan.FromDays(1)),
+            DryRun = true,
+        });
+        report.Errors.Should().Be(0);
+        report.Log.Should().NotContain(l => l.Level == "Error");
     }
 }

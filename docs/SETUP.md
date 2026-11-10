@@ -34,6 +34,11 @@ copy src\LifeDashboard.App\appsettings.Example.json src\LifeDashboard.App\appset
 ```
 Werte eintragen und neu bauen. Die Datei wird beim Build als Ressource eingebettet.
 
+**Echte Konten statt Demo:** In `appsettings.Local.json` steht bereits `"App": { "UseDemoData": false }`. Damit verschwinden
+die Demo-Kalender, und die App zeigt deine verbundenen Konten. Verbinden kannst du sie in **Einstellungen → Konten → Verbinden**:
+Es öffnet sich der Browser, du meldest dich an, danach kehrst du zur App zurück. Der erste Sync sollte ein **Dry-Run** sein.
+Prüfe die Vorschau, wähle in den Einstellungen die zu spiegelnden Kalender und starte erst dann den echten Sync.
+
 **Wichtig:**
 - Eine Mobile-/Desktop-App kann keine echten Geheimnisse schützen: alles, was eingebettet ist, lässt sich aus dem
   Binary auslesen. Deshalb nutzen Microsoft und Google **öffentliche Clients mit PKCE** (kein Secret nötig).
@@ -48,11 +53,12 @@ Werte eintragen und neu bauen. Die Datei wird beim Build als Ressource eingebett
    Ohne eigenen Entra-Tenant lässt sich einer mit einem kostenlosen Azure-Konto anlegen.
 2. Kontotypen: **„Konten in einem beliebigen Organisationsverzeichnis und persönliche Microsoft-Konten“**.
 3. **Authentifizierung** → Plattform **„Mobile- und Desktopanwendungen“**:
-   - Windows: `http://localhost`
-   - iOS: `msauth.at.hanoj.lifedashboard://auth`
+   - Windows: `http://localhost` (genau so, ohne Port; MSAL wählt den Port selbst)
+   - iOS (später): `msauth.at.hanoj.lifedashboard://auth`
    - **„Öffentliche Clientflows zulassen“** = Ja
 4. **API-Berechtigungen** (Microsoft Graph, *delegiert*): `User.Read`, `Calendars.ReadWrite`, `Calendars.Read.Shared`, `offline_access`.
-5. Die **Anwendungs-ID (Client-ID)** kommt in `appsettings.Local.json` → `Microsoft:ClientId`.
+5. Die **Anwendungs-ID (Client-ID)** kommt in `appsettings.Local.json` → `Microsoft:ClientId`, die **Verzeichnis-ID**
+   (bei eigenem Tenant) nach `Microsoft:TenantId`. `Microsoft:RedirectUri` leer lassen oder `http://localhost`.
 
 > **Eigener Tenant (Selbstständige):** Bist du selbst Administrator deines Microsoft-365-Tenants, wähle als Kontotyp
 > „Nur Konten in diesem Organisationsverzeichnis“, trage die **Verzeichnis-ID** als `Microsoft:TenantId` ein und klicke
@@ -76,20 +82,24 @@ Zustimmung) bzw. **D** oder **E**. Alle fremden Kalender sind in der App unabhä
 
 ### 3.2 Google Calendar
 1. https://console.cloud.google.com → neues Projekt → **APIs & Dienste** → **Google Calendar API** aktivieren.
-2. **OAuth-Zustimmungsbildschirm**: Typ *Extern*, dich selbst als **Testnutzer** eintragen, Scope
-   `https://www.googleapis.com/auth/calendar`.
-   - Achtung: Im Status *Testing* laufen Refresh-Tokens **nach 7 Tagen** ab. Für den Dauerbetrieb den Status auf
-     *In Produktion* setzen. Ohne Verifizierung zeigt Google dann einen Warnhinweis, für die private Nutzung ist das ok.
-3. **Anmeldedaten** → OAuth-Client-ID:
-   - **iOS**: Bundle-ID `at.hanoj.lifedashboard`
-   - **Desktop-App** (für Windows, Loopback-Redirect `http://127.0.0.1:<port>`)
-4. Client-ID(s) kommen in `appsettings.Local.json` → `Google`.
+2. **OAuth-Zustimmungsbildschirm** (Google Auth Platform): Typ *Extern*, dich selbst als **Testnutzer** eintragen, Scopes
+   `openid`, `email`, `https://www.googleapis.com/auth/calendar`.
+   - Achtung: Im Status *Testing* laufen Refresh-Tokens **nach 7 Tagen** ab (dann einfach neu verbinden). Für den
+     Dauerbetrieb den Status auf *In Produktion* setzen. Ohne Verifizierung zeigt Google beim Login einen Warnhinweis
+     („Google hat diese App nicht überprüft“ → Erweitert → Weiter), für die private Nutzung ist das ok.
+3. **Clients → Client erstellen → Anwendungstyp „Desktop-App“**. Eine Redirect-URI musst du nicht eintragen, denn
+   Desktop-Clients erlauben automatisch `http://127.0.0.1:<beliebiger Port>`, und genau das nutzt die App (mit PKCE).
+4. **Client-ID** und **Clientschlüssel** kommen in `appsettings.Local.json` → `Google:ClientId` / `Google:ClientSecret`.
+   (Google verlangt den Schlüssel auch bei Desktop-Apps, behandelt ihn dort aber nicht als echtes Geheimnis.)
 
 ### 3.3 Strava
-1. https://www.strava.com/settings/api → App anlegen.
-2. **Authorization Callback Domain**: `localhost`. Redirect der App: `lifedashboard://localhost/strava`.
-3. `Client ID` und `Client Secret` kommen in `appsettings.Local.json` → `Strava`. Scope: `activity:read_all`.
-4. Rate-Limits (Standard): 100 Requests / 15 min, 1000 / Tag. Der Resilience-Handler wartet bei HTTP 429.
+1. https://www.strava.com/settings/api → App anlegen (Name z. B. „Life Dashboard“, Website beliebig).
+2. **Authorization Callback Domain**: `localhost`. Strava erlaubt damit auch `127.0.0.1`, die App nutzt
+   `http://127.0.0.1:<freier Port>/strava`.
+3. `Client ID` und `Client Secret` kommen in `appsettings.Local.json` → `Strava`. Angefragte Rechte: `read,activity:read_all`.
+4. Rate-Limits (Standard): 100 Requests / 15 min, 1000 / Tag. Die App lädt seitenweise und wartet bei HTTP 429 automatisch.
+5. Sportaktivitäten landen im **Sport-Zielkalender**, den du in den Einstellungen wählst (Standard: ein eigener Kalender
+   mit „Sport“ im Namen; leg dir dafür am besten in Google einen Kalender „Sport“ an).
 
 ### 3.4 Börsendaten: Yahoo Finance + Finnhub (optional)
 **Yahoo Finance** ist die Standardquelle und braucht **keine Registrierung**. Sie deckt ATX, DAX, Euro Stoxx, US-Indizes,
