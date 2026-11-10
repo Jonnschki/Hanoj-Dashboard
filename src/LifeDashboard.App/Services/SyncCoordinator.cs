@@ -1,5 +1,7 @@
 using LifeDashboard.Core.Abstractions;
+using LifeDashboard.Core.Common;
 using LifeDashboard.Core.Domain;
+using LifeDashboard.Infrastructure.Ics;
 using LifeDashboard.Core.Sync;
 using LifeDashboard.Infrastructure.Configuration;
 using Microsoft.Extensions.Options;
@@ -15,6 +17,7 @@ public sealed class SyncCoordinator(
     IEnumerable<ICalendarProvider> providers,
     ISyncLedger ledger,
     IUserSettingsStore settingsStore,
+    ISecureTokenStore secrets,
     IClock clock,
     IOptions<SyncSettings> syncSettings,
     IOptions<MarketDataOptions> marketOptions)
@@ -62,6 +65,48 @@ public sealed class SyncCoordinator(
     {
         await settingsStore.SaveAsync(settings, ct);
         _userSettings = settings;
+        _calendars = null; // z. B. neue ICS-Abos → Kalenderliste neu laden
+    }
+
+    /// <summary>
+    /// Fügt ein ICS-Abo hinzu (URL in den sicheren Speicher, Metadaten in die Einstellungen)
+    /// und testet den Link sofort. Liefert die Anzahl der Termine der nächsten 30 Tage.
+    /// Das Abo bleibt auch bei einem fehlgeschlagenen Test gespeichert (z. B. kurz offline) und kann entfernt werden.
+    /// </summary>
+    public async Task<Result<int>> AddIcsSubscriptionAsync(string? name, string? url, CalendarCategory category, CancellationToken ct = default)
+    {
+        var uri = IcsSubscription.NormalizeUrl(url);
+        if (uri is null)
+        {
+            return Result.Failure<int>(new Error("ics.url", "Bitte einen gültigen https:// oder webcal:// Link eingeben."));
+        }
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return Result.Failure<int>(new Error("ics.name", "Bitte einen Namen für den Kalender eingeben."));
+        }
+
+        var subscription = new IcsSubscription(Guid.NewGuid().ToString("N")[..12], name.Trim(), category);
+        await secrets.SetAsync(subscription.SecretKey, uri.ToString());
+        var settings = await GetUserSettingsAsync(ct);
+        await SaveUserSettingsAsync(settings with { IcsSubscriptions = [.. settings.IcsSubscriptions, subscription] }, ct);
+
+        var entry = (await GetCalendarsAsync(ct)).FirstOrDefault(x => x.Calendar.Id == IcsCalendarProvider.CalendarIdFor(subscription.Id));
+        if (entry.Provider is null)
+        {
+            return Result.Failure<int>(new Error("ics.provider", "ICS-Abos sind in dieser Konfiguration nicht verfügbar."));
+        }
+
+        var events = await entry.Provider.GetEventsAsync(entry.Calendar, DateRange.Around(clock.UtcNow, TimeSpan.Zero, TimeSpan.FromDays(30)), ct);
+        return events.IsSuccess ? Result.Success(events.Value.Count) : Result.Failure<int>(events.Error);
+    }
+
+    /// <summary>Entfernt ein ICS-Abo inklusive der gespeicherten URL.</summary>
+    public async Task RemoveIcsSubscriptionAsync(string subscriptionId, CancellationToken ct = default)
+    {
+        var settings = await GetUserSettingsAsync(ct);
+        await SaveUserSettingsAsync(settings with { IcsSubscriptions = settings.IcsSubscriptions.Where(s => s.Id != subscriptionId).ToList() }, ct);
+        await secrets.RemoveAsync(IcsSubscription.SecretKeyFor(subscriptionId));
     }
 
     /// <summary>Watchlist: eigene aus den Einstellungen, sonst die aus appsettings.json.</summary>

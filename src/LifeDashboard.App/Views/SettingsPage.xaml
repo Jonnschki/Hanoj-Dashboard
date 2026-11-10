@@ -46,6 +46,37 @@
                 </VerticalStackLayout>
             </controls:TileView>
 
+            <controls:TileView Title="Fremde Kalender (ICS-Abo, read-only)">
+                <VerticalStackLayout Spacing="10">
+                    <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding IcsSubscriptions}">
+                        <BindableLayout.EmptyView>
+                            <Label Text="Noch keine Abos. Bitte z. B. einen Kunden, seinen Kalender in Outlook zu veröffentlichen, und füge den ICS-Link hier ein." Style="{StaticResource Muted}" />
+                        </BindableLayout.EmptyView>
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:IcsItem">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <VerticalStackLayout>
+                                        <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                        <Label Text="{Binding Details}" Style="{StaticResource Muted}" />
+                                    </VerticalStackLayout>
+                                    <Button Grid.Column="1" Text="Entfernen" Style="{StaticResource SecondaryButton}"
+                                            Command="{Binding RemoveIcsCommand, Source={RelativeSource AncestorType={x:Type vm:SettingsViewModel}}, x:DataType=vm:SettingsViewModel}"
+                                            CommandParameter="{Binding .}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <Label Text="Neues Abo" FontAttributes="Bold" Margin="0,6,0,0" />
+                    <Entry Text="{Binding NewIcsName}" Placeholder="Name, z. B. Kunde Müller GmbH" />
+                    <Entry Text="{Binding NewIcsUrl}" Placeholder="https://… oder webcal://… (.ics)" IsPassword="True" />
+                    <Picker ItemsSource="{Binding Categories}" SelectedItem="{Binding NewIcsCategory}" Title="Bereich" />
+                    <Button Text="Abo hinzufügen und testen" Style="{StaticResource SecondaryButton}" Command="{Binding AddIcsCommand}" HorizontalOptions="Start" />
+                    <Label Text="{Binding IcsStatus}" Style="{StaticResource Muted}" />
+                    <Label Text="Der Link ist geheim (wer ihn kennt, sieht den Kalender). Er wird nur im sicheren Speicher des Geräts abgelegt." Style="{StaticResource Muted}" FontSize="11" />
+                </VerticalStackLayout>
+            </controls:TileView>
+
             <controls:TileView Title="Datenschutz-Regeln">
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Privat → Arbeit (und umgekehrt)" FontAttributes="Bold" />

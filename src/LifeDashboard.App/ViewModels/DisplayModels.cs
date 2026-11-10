@@ -55,6 +55,15 @@ public sealed record CalendarOption(string Id, string Name)
     public override string ToString() => Name;
 }
 
+/// <summary>Abonnierter ICS-Kalender in den Einstellungen (ohne URL – die bleibt im sicheren Speicher).</summary>
+public sealed record IcsItem(string Id, string Name, string Details)
+{
+    public static IcsItem From(IcsSubscription s) => new(
+        s.Id,
+        s.Name,
+        $"ICS-Abo · read-only · {(s.Category == CalendarCategory.Work ? "Arbeit" : "Privat")}");
+}
+
 /// <summary>Eintrag der Sync-Historie.</summary>
 public sealed record SyncRunItem(string When, string Kind, string Summary, string Status)
 {
