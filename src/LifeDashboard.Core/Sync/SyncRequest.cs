@@ -22,6 +22,9 @@ public sealed record SyncRequest
 
     /// <summary>Aktivitäten ab diesem Zeitpunkt importieren.</summary>
     public DateTimeOffset? ActivitiesSinceUtc { get; init; }
+
+    /// <summary>Spiegelungsregeln für diesen Lauf (z. B. aus den Nutzereinstellungen). Null = Regeln der Engine.</summary>
+    public SyncRules? Rules { get; init; }
 }
 
 /// <summary>Fortschritt für die UI.</summary>

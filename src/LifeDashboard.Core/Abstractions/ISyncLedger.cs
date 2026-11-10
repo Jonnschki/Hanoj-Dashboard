@@ -29,3 +29,13 @@ public interface ISyncLedger
     /// <summary>Liefert die letzten Sync-Läufe, neueste zuerst.</summary>
     Task<IReadOnlyList<SyncRunRecord>> GetRecentRunsAsync(int count, CancellationToken cancellationToken = default);
 }
+
+/// <summary>Lädt und speichert die <see cref="UserSettings"/>.</summary>
+public interface IUserSettingsStore
+{
+    /// <summary>Lädt die Einstellungen. Wurde noch nie gespeichert, kommen die Defaults zurück.</summary>
+    Task<UserSettings> LoadAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Speichert die Einstellungen vollständig (ersetzt den bisherigen Stand).</summary>
+    Task SaveAsync(UserSettings settings, CancellationToken cancellationToken = default);
+}
