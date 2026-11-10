@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Zielplattformen:
+    - Windows: immer (wenn auf Windows gebaut wird).
+    - iOS: auf macOS immer; auf Windows nur mit -p:EnableIos=true oder Umgebungsvariable LIFEDASHBOARD_ENABLE_IOS=true
+      (iOS-Builds brauchen einen gekoppelten Mac, siehe docs/SETUP.md). So bleibt der reine Windows-Build ohne Mac lauffähig.
+    - Android/MacCatalyst: vorbereitet, aber deaktiviert (Platforms-Ordner bleiben erhalten).
+  -->
+  <PropertyGroup>
+    <EnableIos Condition="'$(EnableIos)' == '' And '$(LIFEDASHBOARD_ENABLE_IOS)' != ''">$(LIFEDASHBOARD_ENABLE_IOS)</EnableIos>
+    <EnableIos Condition="'$(EnableIos)' == '' And $([MSBuild]::IsOSPlatform('osx'))">true</EnableIos>
+    <EnableIos Condition="'$(EnableIos)' == ''">false</EnableIos>
+
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net10.0-windows10.0.19041.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(EnableIos)' == 'true'">$(TargetFrameworks);net10.0-ios</TargetFrameworks>
+    <!-- Später: <TargetFrameworks>$(TargetFrameworks);net10.0-android;net10.0-maccatalyst</TargetFrameworks> -->
+
+    <OutputType>Exe</OutputType>
+    <RootNamespace>LifeDashboard.App</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+    <ApplicationTitle>Life Dashboard</ApplicationTitle>
+    <ApplicationId>at.hanoj.lifedashboard</ApplicationId>
+    <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <!-- Unpackaged: "dotnet build -t:Run" startet direkt, kein MSIX nötig. Für Store/MSIX siehe https://aka.ms/MauiTemplateUnpackaged -->
+    <WindowsPackageType>None</WindowsPackageType>
+
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">17.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#1F6FEB" />
+    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#1F6FEB" BaseSize="128,128" />
+    <MauiImage Include="Resources\Images\*" />
+    <MauiFont Include="Resources\Fonts\*" />
+    <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Konfiguration: appsettings.json (eingecheckt, ohne Secrets) + appsettings.Local.json (gitignored, optional). -->
+  <ItemGroup>
+    <EmbeddedResource Include="appsettings.json" LogicalName="appsettings.json" />
+    <EmbeddedResource Include="appsettings.Local.json" LogicalName="appsettings.Local.json" Condition="Exists('appsettings.Local.json')" />
+    <None Include="appsettings.Example.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" />
+    <PackageReference Include="CommunityToolkit.Maui" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LifeDashboard.Core\LifeDashboard.Core.csproj" />
+    <ProjectReference Include="..\LifeDashboard.Infrastructure\LifeDashboard.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

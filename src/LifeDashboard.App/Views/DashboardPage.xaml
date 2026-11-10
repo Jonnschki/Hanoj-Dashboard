@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="LifeDashboard.App.Views.DashboardPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:LifeDashboard.App.Controls"
+    xmlns:vm="clr-namespace:LifeDashboard.App.ViewModels"
+    x:DataType="vm:DashboardViewModel"
+    Title="Dashboard">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Einstellungen" IconImageSource="tab_settings.png" Command="{Binding OpenSettingsCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <RefreshView Command="{Binding LoadCommand}" IsRefreshing="{Binding IsBusy}">
+        <ScrollView>
+            <VerticalStackLayout Padding="{OnIdiom Phone='16,12', Default='28,24'}" Spacing="16" MaximumWidthRequest="1200">
+
+                <Label Text="{Binding Greeting}" Style="{StaticResource PageTitle}" />
+
+                <Button Text="⟳  Aktualisieren" Style="{StaticResource PrimaryButton}" Command="{Binding RefreshCommand}"
+                        HorizontalOptions="{OnIdiom Phone=Fill, Default=Start}" WidthRequest="{OnIdiom Phone=-1, Default=260}" />
+
+                <FlexLayout Wrap="Wrap" Direction="Row" JustifyContent="SpaceBetween" AlignItems="Start">
+
+                    <controls:TileView Title="Heute" FlexLayout.Basis="{OnIdiom Phone='100%', Default='49%'}" Margin="0,0,0,14">
+                        <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Today}">
+                            <BindableLayout.EmptyView>
+                                <Label Text="Keine Termine heute 🎉" Style="{StaticResource Muted}" />
+                            </BindableLayout.EmptyView>
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:EventItem">
+                                    <Grid ColumnDefinitions="96,*" ColumnSpacing="8">
+                                        <Label Text="{Binding When}" Style="{StaticResource Muted}" />
+                                        <VerticalStackLayout Grid.Column="1">
+                                            <Label Text="{Binding Title}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                            <HorizontalStackLayout Spacing="6">
+                                                <Label Text="{Binding CalendarName}" Style="{StaticResource Muted}" />
+                                                <Label Text="{Binding Badge}" Style="{StaticResource Badge}" />
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </controls:TileView>
+
+                    <controls:TileView Title="Nächste Termine" FlexLayout.Basis="{OnIdiom Phone='100%', Default='49%'}" Margin="0,0,0,14">
+                        <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Upcoming}">
+                            <BindableLayout.EmptyView>
+                                <Label Text="Nichts geplant." Style="{StaticResource Muted}" />
+                            </BindableLayout.EmptyView>
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:EventItem">
+                                    <VerticalStackLayout>
+                                        <Label Text="{Binding Title}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding When}" Style="{StaticResource Muted}" />
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </controls:TileView>
+
+                    <controls:TileView Title="Sport · 7 Tage" FlexLayout.Basis="{OnIdiom Phone='100%', Default='32%'}" Margin="0,0,0,14">
+                        <VerticalStackLayout>
+                            <Label Text="{Binding SportSummary}" Style="{StaticResource BigNumber}" />
+                            <Label Text="{Binding SportDetails}" Style="{StaticResource Muted}" />
+                        </VerticalStackLayout>
+                    </controls:TileView>
+
+                    <controls:TileView Title="Märkte" FlexLayout.Basis="{OnIdiom Phone='100%', Default='32%'}" Margin="0,0,0,14">
+                        <VerticalStackLayout Spacing="6">
+                            <VerticalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Quotes}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:QuoteItem">
+                                        <Grid ColumnDefinitions="*,Auto,72">
+                                            <Label Text="{Binding Symbol}" FontAttributes="Bold" />
+                                            <Label Grid.Column="1" Text="{Binding Price}" />
+                                            <Label Grid.Column="2" Text="{Binding Change}" HorizontalTextAlignment="End">
+                                                <Label.Triggers>
+                                                    <DataTrigger TargetType="Label" Binding="{Binding IsUp}" Value="True">
+                                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Positive}, Dark={StaticResource PositiveDark}}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger TargetType="Label" Binding="{Binding IsUp}" Value="False">
+                                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Negative}, Dark={StaticResource NegativeDark}}" />
+                                                    </DataTrigger>
+                                                </Label.Triggers>
+                                            </Label>
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                            <Label Text="{Binding MarketSource}" Style="{StaticResource Muted}" FontSize="11" />
+                        </VerticalStackLayout>
+                    </controls:TileView>
+
+                    <controls:TileView Title="Letzter Sync" FlexLayout.Basis="{OnIdiom Phone='100%', Default='32%'}" Margin="0,0,0,14">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding SyncStatus}" FontAttributes="Bold" />
+                            <Label Text="{Binding SyncDetails}" Style="{StaticResource Muted}" />
+                        </VerticalStackLayout>
+                    </controls:TileView>
+
+                </FlexLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

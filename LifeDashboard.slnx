@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LifeDashboard.App/LifeDashboard.App.csproj" />
+    <Project Path="src/LifeDashboard.Core/LifeDashboard.Core.csproj" />
+    <Project Path="src/LifeDashboard.Infrastructure/LifeDashboard.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LifeDashboard.Core.Tests/LifeDashboard.Core.Tests.csproj" />
+    <Project Path="tests/LifeDashboard.Infrastructure.Tests/LifeDashboard.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>
