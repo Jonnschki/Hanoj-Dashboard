@@ -23,6 +23,31 @@
 
                 <FlexLayout Wrap="Wrap" Direction="Row" JustifyContent="SpaceBetween" AlignItems="Start">
 
+                    <controls:TileView Title="Schlagzeilen" FlexLayout.Basis="100%" Margin="0,0,0,14">
+                        <VerticalStackLayout Spacing="10">
+                            <VerticalStackLayout Spacing="10" BindableLayout.ItemsSource="{Binding Headlines}">
+                                <BindableLayout.EmptyView>
+                                    <Label Text="Schlagzeilen werden geladen …" Style="{StaticResource Muted}" />
+                                </BindableLayout.EmptyView>
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:StoryItem">
+                                        <VerticalStackLayout>
+                                            <VerticalStackLayout.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding OpenStoryCommand, Source={RelativeSource AncestorType={x:Type vm:DashboardViewModel}}, x:DataType=vm:DashboardViewModel}" CommandParameter="{Binding .}" />
+                                            </VerticalStackLayout.GestureRecognizers>
+                                            <Label Text="{Binding Title}" FontAttributes="Bold" />
+                                            <HorizontalStackLayout Spacing="8">
+                                                <Label Text="{Binding Meta}" Style="{StaticResource Muted}" FontSize="12" />
+                                                <Label Text="{Binding OtherSources}" Style="{StaticResource Badge}" IsVisible="{Binding HasOtherSources}" LineBreakMode="TailTruncation" />
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                            <Button Text="Alle Schlagzeilen" Style="{StaticResource SecondaryButton}" Command="{Binding OpenNewsCommand}" HorizontalOptions="Start" />
+                        </VerticalStackLayout>
+                    </controls:TileView>
+
                     <controls:TileView Title="Heute" FlexLayout.Basis="{OnIdiom Phone='100%', Default='49%'}" Margin="0,0,0,14">
                         <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Today}">
                             <BindableLayout.EmptyView>
@@ -63,6 +88,9 @@
 
                     <controls:TileView Title="Sport · 7 Tage" FlexLayout.Basis="{OnIdiom Phone='100%', Default='32%'}" Margin="0,0,0,14">
                         <VerticalStackLayout>
+                            <VerticalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenSportCommand}" />
+                            </VerticalStackLayout.GestureRecognizers>
                             <Label Text="{Binding SportSummary}" Style="{StaticResource BigNumber}" />
                             <Label Text="{Binding SportDetails}" Style="{StaticResource Muted}" />
                         </VerticalStackLayout>

@@ -15,8 +15,11 @@ public sealed partial class DashboardViewModel(
     DailyDigestBuilder digest,
     IActivityProvider activities,
     IMarketDataProvider markets,
+    NewsCoordinator news,
     IClock clock) : ObservableObject
 {
+    public ObservableCollection<StoryItem> Headlines { get; } = [];
+
     public ObservableCollection<EventItem> Today { get; } = [];
 
     public ObservableCollection<EventItem> Upcoming { get; } = [];
@@ -55,6 +58,9 @@ public sealed partial class DashboardViewModel(
         IsBusy = true;
         try
         {
+            // Schlagzeilen parallel laden (Netzwerk), Rest der Kacheln wartet nicht darauf.
+            var headlinesTask = LoadHeadlinesAsync();
+
             var local = TimeZoneInfo.ConvertTime(clock.UtcNow, clock.LocalTimeZone);
             Greeting = $"{(local.Hour < 11 ? "Guten Morgen" : local.Hour < 18 ? "Hallo" : "Guten Abend")} · {local.ToString("dddd, d. MMMM", CultureInfo.GetCultureInfo("de-AT"))}";
 
@@ -78,14 +84,39 @@ public sealed partial class DashboardViewModel(
                 Replace(Quotes, quotes.Value.Select(QuoteItem.From));
             }
 
-            MarketSource = $"Quelle: {markets.Name}";
+            MarketSource = quotes.IsSuccess ? $"Quelle: {markets.Name}" : $"Kurse nicht verfügbar: {quotes.Error.Message}";
             await UpdateSyncStatusAsync();
+            await headlinesTask;
         }
         finally
         {
             IsBusy = false;
         }
     }
+
+    private async Task LoadHeadlinesAsync()
+    {
+        try
+        {
+            var stories = await news.GetStoriesAsync();
+            Replace(Headlines, stories.Take(6).Select(s => StoryItem.From(s, news)));
+        }
+        catch (HttpRequestException)
+        {
+            Headlines.Clear();
+        }
+    }
+
+    [RelayCommand]
+    private static Task OpenStoryAsync(StoryItem item) => Launcher.Default.OpenAsync(item.Link);
+
+    [RelayCommand]
+    private static Task OpenNewsAsync() => Shell.Current.GoToAsync("//news");
+
+    [RelayCommand]
+    private static Task OpenSportAsync() => DeviceInfo.Idiom == DeviceIdiom.Desktop
+        ? Shell.Current.GoToAsync("//sport")
+        : Shell.Current.GoToAsync("sportdetail");
 
     [RelayCommand]
     private static Task RefreshAsync() => Shell.Current.GoToAsync("//sync?autostart=true");

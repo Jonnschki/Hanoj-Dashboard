@@ -19,7 +19,7 @@ public sealed record DailyDigest(
         sb.Append(CultureInfo.InvariantCulture, $"{TodaysEvents.Count} Termine heute");
         foreach (var q in Quotes.Take(3))
         {
-            sb.Append(CultureInfo.InvariantCulture, $" · {q.Symbol} {q.ChangePercent:+0.0;-0.0}%");
+            sb.Append(CultureInfo.InvariantCulture, $" · {q.Name ?? q.Symbol} {q.ChangePercent:+0.0;-0.0}%");
         }
 
         return sb.ToString();

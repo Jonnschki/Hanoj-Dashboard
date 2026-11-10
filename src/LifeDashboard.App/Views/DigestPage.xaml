@@ -18,6 +18,22 @@
                 <Button Text="Als Benachrichtigung" Style="{StaticResource SecondaryButton}" Command="{Binding NotifyCommand}" />
             </HorizontalStackLayout>
 
+            <controls:TileView Title="Die wichtigsten Schlagzeilen">
+                <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Headlines}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:StoryItem">
+                            <VerticalStackLayout>
+                                <VerticalStackLayout.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding OpenStoryCommand, Source={RelativeSource AncestorType={x:Type vm:DigestViewModel}}, x:DataType=vm:DigestViewModel}" CommandParameter="{Binding .}" />
+                                </VerticalStackLayout.GestureRecognizers>
+                                <Label Text="{Binding Title}" FontAttributes="Bold" />
+                                <Label Text="{Binding Meta}" Style="{StaticResource Muted}" FontSize="12" />
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </controls:TileView>
+
             <controls:TileView Title="Heute">
                 <VerticalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Events}">
                     <BindableLayout.EmptyView>

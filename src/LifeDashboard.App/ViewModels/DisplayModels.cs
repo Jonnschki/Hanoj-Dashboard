@@ -34,7 +34,7 @@ public sealed record EventItem(string Title, string When, string CalendarName, b
 public sealed record QuoteItem(string Symbol, string Price, string Change, bool IsUp)
 {
     public static QuoteItem From(MarketQuote q) => new(
-        q.Symbol,
+        q.Name ?? q.Symbol,
         q.Price.ToString("N2", CultureInfo.GetCultureInfo("de-AT")),
         $"{q.ChangePercent:+0.00;-0.00}%",
         q.ChangePercent >= 0);

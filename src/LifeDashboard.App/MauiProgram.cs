@@ -34,6 +34,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISecureTokenStore, MauiSecureTokenStore>();
         builder.Services.AddSingleton<INotificationService, LocalNotificationService>();
         builder.Services.AddSingleton<SyncCoordinator>();
+        builder.Services.AddSingleton<NewsCoordinator>();
 
         AddPages(builder.Services);
 
@@ -67,6 +68,7 @@ public static class MauiProgram
     private static void AddPages(IServiceCollection services)
     {
         services.AddTransient<DashboardViewModel>().AddTransient<DashboardPage>();
+        services.AddTransient<NewsViewModel>().AddTransient<NewsPage>();
         services.AddTransient<SyncViewModel>().AddTransient<SyncPage>();
         services.AddTransient<CalendarViewModel>().AddTransient<CalendarPage>();
         services.AddTransient<SportViewModel>().AddTransient<SportPage>();
