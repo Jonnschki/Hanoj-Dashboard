@@ -6,8 +6,6 @@ using LifeDashboard.App.Services;
 using LifeDashboard.Core.Abstractions;
 using LifeDashboard.Core.Digest;
 using LifeDashboard.Core.Domain;
-using LifeDashboard.Infrastructure.Configuration;
-using Microsoft.Extensions.Options;
 
 namespace LifeDashboard.App.ViewModels;
 
@@ -17,8 +15,7 @@ public sealed partial class DashboardViewModel(
     DailyDigestBuilder digest,
     IActivityProvider activities,
     IMarketDataProvider markets,
-    IClock clock,
-    IOptions<MarketDataOptions> marketOptions) : ObservableObject
+    IClock clock) : ObservableObject
 {
     public ObservableCollection<EventItem> Today { get; } = [];
 
@@ -75,7 +72,7 @@ public sealed partial class DashboardViewModel(
                 SportDetails = $"{week.Value.Count} Aktivitäten · {time:h\\:mm} h";
             }
 
-            var quotes = await markets.GetQuotesAsync(marketOptions.Value.Watchlist.ToList());
+            var quotes = await markets.GetQuotesAsync(await sync.GetWatchlistAsync());
             if (quotes.IsSuccess)
             {
                 Replace(Quotes, quotes.Value.Select(QuoteItem.From));
@@ -98,7 +95,7 @@ public sealed partial class DashboardViewModel(
 
     private async Task UpdateSyncStatusAsync()
     {
-        var last = await sync.GetLastRunAsync();
+        var last = (await sync.GetRecentRunsAsync(1)).FirstOrDefault();
         if (last is null)
         {
             return;

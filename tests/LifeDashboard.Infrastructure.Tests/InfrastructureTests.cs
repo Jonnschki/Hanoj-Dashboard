@@ -145,7 +145,7 @@ public sealed class DependencyInjectionTests
         var services = new ServiceCollection()
             .AddLogging()
             .AddSingleton(Substitute.For<ISecureTokenStore>())
-            .AddLifeDashboard(config);
+            .AddLifeDashboard(config, Path.Combine(Path.GetTempPath(), $"ld-di-{Guid.NewGuid():N}.db3"));
         await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
 
         var engine = provider.GetRequiredService<SyncEngine>();

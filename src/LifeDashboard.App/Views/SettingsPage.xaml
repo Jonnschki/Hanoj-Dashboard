@@ -50,7 +50,15 @@
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Privat → Arbeit (und umgekehrt)" FontAttributes="Bold" />
                     <Picker ItemsSource="{Binding DetailLevels}" SelectedItem="{Binding PrivateToWork}" />
-                    <Label Text="BusyOnly = nur „Beschäftigt“, ohne Titel und Details (Standard). Speichern folgt in Phase 1." Style="{StaticResource Muted}" />
+                    <Label Text="BusyOnly = nur „Beschäftigt“, ohne Titel und Details (Standard). None = gar nicht spiegeln. Full = alle Details." Style="{StaticResource Muted}" />
+                </VerticalStackLayout>
+            </controls:TileView>
+
+            <controls:TileView Title="Sport">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Zielkalender für Strava-Aktivitäten" FontAttributes="Bold" />
+                    <Picker ItemsSource="{Binding SportTargets}" SelectedItem="{Binding SportTarget}" ItemDisplayBinding="{Binding Name, x:DataType=vm:CalendarOption}" Title="Kalender wählen" />
+                    <Label Text="Dieser Kalender wird mit Aktivitäten gefüllt, aber nicht in andere Kalender gespiegelt." Style="{StaticResource Muted}" />
                 </VerticalStackLayout>
             </controls:TileView>
 
@@ -58,10 +66,13 @@
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Uhrzeit" FontAttributes="Bold" />
                     <TimePicker Time="{Binding DigestTime}" Format="HH:mm" />
-                    <Label Text="Watchlist (kommagetrennt)" FontAttributes="Bold" />
-                    <Entry Text="{Binding Watchlist}" Placeholder="SPY, QQQ, AAPL" />
+                    <Label Text="Watchlist (kommagetrennt, leer = Standard)" FontAttributes="Bold" />
+                    <Entry Text="{Binding Watchlist}" Placeholder="{Binding WatchlistPlaceholder}" />
                 </VerticalStackLayout>
             </controls:TileView>
+
+            <Button Text="Einstellungen speichern" Style="{StaticResource PrimaryButton}" Command="{Binding SaveCommand}"
+                    HorizontalOptions="{OnIdiom Phone=Fill, Default=Start}" WidthRequest="{OnIdiom Phone=-1, Default=280}" />
 
             <controls:TileView Title="Export">
                 <HorizontalStackLayout Spacing="10">

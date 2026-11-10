@@ -4,8 +4,9 @@
 Outlook und Google, spiegelt sie zwischen den eigenen Kalendern, holt Strava-Aktivitäten in den Kalender und
 zeigt einen Tages-Digest mit Märkten. Danach muss man nur noch in den Kalender schauen.
 
-> **Status: Phase 0 (Skelett).** Die App läuft im Demo-Modus mit Beispieldaten. Die Sync-Engine ist fertig und getestet,
-> die Anbindungen an Microsoft, Google und Strava folgen laut [Roadmap](docs/ROADMAP.md).
+> **Status: Phase 1 (Persistenz) abgeschlossen.** Die App läuft im Demo-Modus mit Beispieldaten. Sync-Engine, SQLite-Ledger
+> und gespeicherte Einstellungen sind fertig und getestet; die Anbindungen an Microsoft, Google und Strava folgen laut
+> [Roadmap](docs/ROADMAP.md).
 
 ## Schnellstart (Windows)
 ```bash

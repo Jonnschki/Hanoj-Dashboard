@@ -22,6 +22,9 @@ public sealed partial class SyncViewModel : ObservableObject, IQueryAttributable
 
     public ObservableCollection<SyncActionItem> Actions { get; } = [];
 
+    /// <summary>Die letzten Läufe (aus dem Ledger).</summary>
+    public ObservableCollection<SyncRunItem> History { get; } = [];
+
     [ObservableProperty]
     public partial bool DryRun { get; set; }
 
@@ -62,6 +65,7 @@ public sealed partial class SyncViewModel : ObservableObject, IQueryAttributable
     /// <summary>Wird beim Erscheinen der Seite aufgerufen (Start per Dashboard-Button).</summary>
     public async Task OnAppearingAsync()
     {
+        await LoadHistoryAsync();
         if (_autoStart)
         {
             _autoStart = false;
@@ -117,6 +121,16 @@ public sealed partial class SyncViewModel : ObservableObject, IQueryAttributable
         finally
         {
             IsRunning = false;
+            await LoadHistoryAsync();
+        }
+    }
+
+    private async Task LoadHistoryAsync()
+    {
+        History.Clear();
+        foreach (var run in await _sync.GetRecentRunsAsync(10))
+        {
+            History.Add(SyncRunItem.From(run));
         }
     }
 }

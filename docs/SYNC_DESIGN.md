@@ -9,7 +9,7 @@ Implementierung: `src/LifeDashboard.Core/Sync/SyncEngine.cs`. Tests: `tests/Life
 | R1 | **Nur in eigene Kalender schreiben.** Kalender von Vorgesetzten/Kollegen sind strikt read-only. | Dreifach abgesichert: (1) `SyncEngine` nimmt nur `CalendarOwnership.Own` in die Spiegelung auf. (2) `CalendarWriteGate.Open` prüft die Eigentümerschaft **bevor** der Provider gefragt wird und kapselt den Writer so, dass jede einzelne Operation erneut geprüft wird (auch gegen fehlerhafte Provider). (3) Jeder Provider wirft selbst `ReadOnlyCalendarException` in `GetWriter`. | `Shared_calendar_is_never_written…`, `Write_gate_rejects…`, `Write_gate_blocks_buggy_provider…`, `Ics_provider_never_hands_out_writer…` |
 | R2 | **Idempotenz**: mehrfaches Syncen erzeugt keine Duplikate. | Ledger-Schlüssel `(OriginKey, TargetCalendarId)` und Inhalts-Hash. Gleicher Hash → `Unchanged`, kein Schreibzugriff. | `Syncing_twice_creates_no_duplicates` |
 | R3 | **Schleifenschutz** (A→B→A). | Jede Spiegelung trägt einen `OriginMarker` (`OriginProvider`, `OriginId`, `SyncHash`). Termine mit Marker sind nie Quelle. Zusätzlich gilt ein Termin, den das Ledger als Ziel kennt, nie als Quelle, auch wenn der Marker verloren ging. | `Mirrors_carry_origin_marker…`, `Mirror_that_lost_its_marker…` |
-| R4 | **Sync-Ledger** in SQLite. | `ISyncLedger`; Schema siehe unten. Bis Phase 1 läuft `InMemorySyncLedger`. | |
+| R4 | **Sync-Ledger** in SQLite. | `ISyncLedger` → `SqliteSyncLedger`; Schema siehe unten. Im Demo-Modus `InMemorySyncLedger`. | `SyncLedgerContractTests` (InMemory + SQLite), `Sync_with_sqlite_ledger_stays_idempotent_across_restarts` |
 | R5 | **Konflikte**, Default „zuletzt geändert gewinnt“, wird protokolliert. | `ConflictResolver`, Strategien `LastModifiedWins` / `SourceWins` / `TargetWins`. Ein Konflikt liegt vor, wenn der **Server-Zeitstempel** der Spiegelung neuer ist als der Zeitstempel, den der Server bei unserem letzten Schreiben gemeldet hat (`WriteReceipt`). So spielt Uhrabweichung keine Rolle. | `Conflict_last_modified_wins_*` |
 | R6 | **Löschungen** nur bei vom Ledger bekannten Spiegelungen, standardmäßig erst nach Bestätigung. | Fehlt ein Original im Fenster, wird `PendingDeleteConfirmation` geplant. Gelöscht wird erst mit `ConfirmDeletes = true`. Fremde Termine stehen nie im Ledger und werden daher nie gelöscht. Kalender, die nicht geladen werden konnten, gelten **nicht** als leer. | `Deleted_original_*`, `Events_not_created_by_the_app…`, `Failed_calendar_load_does_not_delete_mirrors` |
 | R7 | **Dry-Run** zeigt eine Vorschau, ohne zu schreiben. | `SyncRequest.DryRun` (Default `true`). Es wird nur geplant, der Report enthält alle Aktionen mit `Outcome = Planned`. | `Dry_run_plans_changes_but_writes_nothing`, `Dry_run_after_real_sync_reports_pending_delete…` |
@@ -63,25 +63,45 @@ sequenceDiagram
 | Google | `extendedProperties.private`: `LifeDashboard.OriginProvider`, `LifeDashboard.OriginId`, `LifeDashboard.SyncHash` |
 | Microsoft Graph | Single-Value Extended Property `String {6f8b2a9e-3c1d-4e57-9a0b-2d4c6e8f1a3b} Name LifeDashboard.Origin`, Wert ist JSON `{OriginProvider, OriginId, SyncHash}` (siehe `GraphCalendarProvider.OriginPropertyId`). Single-Value statt Open Extension, weil sich Single-Value Properties per `$filter` abfragen lassen. |
 
-## Ledger-Schema (SQLite, Phase 1)
+## Datenbank (SQLite)
 
-Siehe `src/LifeDashboard.Infrastructure/Persistence/SqliteSyncLedger.cs` → `LedgerSchema`.
+Eine Datei `lifedashboard.db3` im App-Datenordner (`FileSystem.AppDataDirectory`), Zugriff über sqlite-net-pcl.
+Code: `src/LifeDashboard.Infrastructure/Persistence/` (`SqliteDatabase`, `DatabaseSchema`, `SqliteSyncLedger`, `SqliteUserSettingsStore`).
+Alle Zeitpunkte werden als **UTC-Ticks** (`INTEGER`) gespeichert, Enums als Text.
 
+### Tabelle `Ledger`
 | Spalte | Bedeutung |
 |---|---|
 | `OriginKey` + `TargetCalendarId` | Primärschlüssel |
 | `OriginProvider`, `SourceCalendarId`, `OriginNativeId` | Herkunft (`SourceCalendarId` ist bei Aktivitäten `NULL`) |
-| `OriginStartUtc` | begrenzt Löschungen auf das Sync-Fenster |
-| `TargetEventId` | ID der Spiegelung (Index für den Schleifenschutz) |
+| `OriginStartUtcTicks` | begrenzt Löschungen auf das Sync-Fenster |
+| `TargetEventId` | ID der Spiegelung (Index `IX_Ledger_Target` für den Schleifenschutz) |
 | `SyncHash` | Hash des zuletzt geschriebenen Inhalts |
-| `TargetLastModifiedUtc` | Server-Zeitstempel nach unserem Schreiben (Konflikterkennung) |
-| `LastSyncedUtc`, `Status` | Info |
+| `TargetLastModifiedUtcTicks` | Server-Zeitstempel nach unserem Schreiben (Konflikterkennung) |
+| `LastSyncedUtcTicks`, `Status` | Info |
 
-Dazu kommen die Tabelle `SyncRun` (Historie für die Dashboard-Kachel) und `SchemaVersion`.
+### Weitere Tabellen
+- `SyncRun`: Historie der Läufe (Dashboard-Kachel, Verlauf auf der Sync-Seite).
+- `Setting`: Schlüssel/Wert. Unter `user` liegen die `UserSettings` als JSON. Neue Einstellungen brauchen so keine
+  Migration; fehlende Felder bekommen beim Laden ihre Defaults, kaputtes JSON führt zu Defaults statt zum Absturz.
+- `SchemaVersion`: aktuelle Schemaversion.
 
-**Migrationsstrategie:** `LedgerSchema.Migrations` ist eine geordnete Liste von SQL-Skripten, die nur vorwärts laufen.
-Beim Start wird `SchemaVersion` gelesen und alle fehlenden Skripte laufen in einer Transaktion. Bestehende Skripte werden
-nie geändert, neue werden nur angehängt.
+### Migrationsstrategie
+`DatabaseSchema.Migrations` ist eine geordnete Liste; jede Migration besteht aus einzelnen SQL-Anweisungen
+(sqlite-net führt pro Aufruf nur eine aus). Beim ersten Zugriff liest `SqliteDatabase` die `SchemaVersion` und spielt alle
+fehlenden Migrationen ein, jede in **einer eigenen Transaktion**. Bestehende Migrationen werden nie geändert, neue nur angehängt.
+
+### Demo-Modus
+Mit `App:UseDemoData = true` bleibt das **Ledger im Speicher** (`InMemorySyncLedger`). Die Demo-Kalender entstehen bei
+jedem Start neu und vergeben dieselben IDs; ein dauerhaftes Ledger würde sonst auf falsche Demo-Termine zeigen.
+Die **Einstellungen** werden auch im Demo-Modus in SQLite gespeichert.
+
+## Nutzereinstellungen und Regeln
+
+`UserSettings` (Core) enthält Kalenderauswahl, Sport-Zielkalender, die Detailstufe privat ↔ Arbeit, die Digest-Uhrzeit
+und die Watchlist. Jeder Lauf bekommt die Regeln aus den Einstellungen über `SyncRequest.Rules` (`UserSettings.ToRules()`).
+Solange der Nutzer die Kalenderauswahl nie gespeichert hat (`HasCalendarSelection = false`), gelten alle eigenen
+Kalender als ausgewählt. Fremde Kalender werden in der App zusätzlich herausgefiltert und in der Engine ohnehin ignoriert.
 
 ## Bekannte Grenzen (bewusst, später angehen)
 

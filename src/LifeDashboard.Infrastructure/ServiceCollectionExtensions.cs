@@ -1,4 +1,4 @@
-﻿using LifeDashboard.Core.Abstractions;
+using LifeDashboard.Core.Abstractions;
 using LifeDashboard.Core.Common;
 using LifeDashboard.Core.Digest;
 using LifeDashboard.Core.InMemory;
@@ -40,10 +40,26 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    /// <summary>Ledger. Phase 1 ersetzt InMemory durch <see cref="Persistence.SqliteSyncLedger"/>.</summary>
-    public static IServiceCollection AddPersistence(this IServiceCollection services)
+    /// <summary>
+    /// SQLite-Datenbank, Einstellungen und Ledger.
+    /// Im Demo-Modus bleibt das Ledger im Speicher: Die Demo-Kalender entstehen bei jedem Start neu (mit denselben IDs),
+    /// ein dauerhaftes Ledger würde sonst auf fremde Demo-Termine zeigen. Einstellungen werden immer gespeichert.
+    /// </summary>
+    public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration, string databasePath)
     {
-        services.AddSingleton<ISyncLedger, InMemorySyncLedger>();
+        services.AddSingleton(_ => new Persistence.SqliteDatabase(databasePath));
+        services.AddSingleton<IUserSettingsStore, Persistence.SqliteUserSettingsStore>();
+
+        var app = configuration.GetSection(AppOptions.Section).Get<AppOptions>() ?? new AppOptions();
+        if (app.UseDemoData)
+        {
+            services.AddSingleton<ISyncLedger, InMemorySyncLedger>();
+        }
+        else
+        {
+            services.AddSingleton<ISyncLedger, Persistence.SqliteSyncLedger>();
+        }
+
         return services;
     }
 
@@ -58,7 +74,7 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            // Phase 2/3: Provider werden pro verbundenem Konto Ã¼ber eine Account-Registry erzeugt.
+            // Phase 2/3: Provider werden pro verbundenem Konto über eine Account-Registry erzeugt.
             services.AddSingleton<IEnumerable<ICalendarProvider>>(_ => []);
         }
 
@@ -68,7 +84,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    /// <summary>Strava (bzw. Demo-AktivitÃ¤ten) inkl. HttpClient mit Retry/Backoff/Timeout.</summary>
+    /// <summary>Strava (bzw. Demo-Aktivitäten) inkl. HttpClient mit Retry/Backoff/Timeout.</summary>
     public static IServiceCollection AddActivities(this IServiceCollection services, IConfiguration configuration)
     {
         var app = configuration.GetSection(AppOptions.Section).Get<AppOptions>() ?? new AppOptions();
@@ -111,10 +127,13 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>Komplettregistrierung aller Module (ohne plattformspezifische Dienste wie SecureStorage/Notifications).</summary>
-    public static IServiceCollection AddLifeDashboard(this IServiceCollection services, IConfiguration configuration) => services
+    /// <param name="services">DI-Container.</param>
+    /// <param name="configuration">Konfiguration (appsettings).</param>
+    /// <param name="databasePath">Pfad der SQLite-Datei (App: FileSystem.AppDataDirectory).</param>
+    public static IServiceCollection AddLifeDashboard(this IServiceCollection services, IConfiguration configuration, string databasePath) => services
         .AddLifeDashboardOptions(configuration)
         .AddLifeDashboardCore()
-        .AddPersistence()
+        .AddPersistence(configuration, databasePath)
         .AddCalendars(configuration)
         .AddActivities(configuration)
         .AddMarketData(configuration)

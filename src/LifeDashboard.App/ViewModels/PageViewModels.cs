@@ -69,8 +69,7 @@ public sealed partial class DigestViewModel(
     SyncCoordinator sync,
     DailyDigestBuilder builder,
     IMarketDataProvider markets,
-    INotificationService notifications,
-    IOptions<MarketDataOptions> marketOptions) : ObservableObject
+    INotificationService notifications) : ObservableObject
 {
     private DailyDigest? _digest;
 
@@ -88,7 +87,7 @@ public sealed partial class DigestViewModel(
     private async Task BuildAsync()
     {
         var events = await sync.GetEventsAsync(builder.TodayRange());
-        var quotes = await markets.GetQuotesAsync(marketOptions.Value.Watchlist.ToList());
+        var quotes = await markets.GetQuotesAsync(await sync.GetWatchlistAsync());
         _digest = builder.Build(events.Select(e => e.Event), quotes.IsSuccess ? quotes.Value : [], markets.Name);
 
         Events.Clear();
@@ -125,7 +124,6 @@ public sealed partial class SettingsViewModel(
     SyncCoordinator sync,
     IEnumerable<IAccountConnector> connectors,
     IEnumerable<IExportService> exporters,
-    SyncRules rules,
     IOptions<MarketDataOptions> marketOptions,
     IClock clock) : ObservableObject
 {
@@ -133,16 +131,25 @@ public sealed partial class SettingsViewModel(
 
     public ObservableCollection<CalendarChoice> Calendars { get; } = [];
 
+    /// <summary>Eigene Kalender als mögliches Ziel für Sportaktivitäten.</summary>
+    public ObservableCollection<CalendarOption> SportTargets { get; } = [];
+
     public IReadOnlyList<MirrorDetailLevel> DetailLevels { get; } = Enum.GetValues<MirrorDetailLevel>();
 
-    [ObservableProperty]
-    public partial MirrorDetailLevel PrivateToWork { get; set; } = rules.Rules.First(r => r.From == CalendarCategory.Private && r.To == CalendarCategory.Work).Level;
+    /// <summary>Platzhalter im Watchlist-Feld: die Liste aus appsettings.json.</summary>
+    public string WatchlistPlaceholder { get; } = string.Join(", ", marketOptions.Value.Watchlist);
 
     [ObservableProperty]
-    public partial TimeSpan DigestTime { get; set; } = sync.Settings.DigestTime.ToTimeSpan();
+    public partial MirrorDetailLevel PrivateToWork { get; set; } = MirrorDetailLevel.BusyOnly;
 
     [ObservableProperty]
-    public partial string Watchlist { get; set; } = string.Join(", ", marketOptions.Value.Watchlist);
+    public partial CalendarOption? SportTarget { get; set; }
+
+    [ObservableProperty]
+    public partial TimeSpan DigestTime { get; set; }
+
+    [ObservableProperty]
+    public partial string Watchlist { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string Status { get; set; } = string.Empty;
@@ -156,26 +163,45 @@ public sealed partial class SettingsViewModel(
             Accounts.Add(new AccountItem(connector, await connector.IsConnectedAsync()));
         }
 
+        var settings = await sync.GetUserSettingsAsync();
+        var selected = await sync.GetSelectedCalendarIdsAsync();
+        var sportTargetId = await sync.GetActivityTargetCalendarIdAsync();
+
         Calendars.Clear();
+        SportTargets.Clear();
         foreach (var (_, calendar) in await sync.GetCalendarsAsync())
         {
-            var choice = new CalendarChoice(calendar, sync.SelectedCalendarIds.Contains(calendar.Id));
-            choice.PropertyChanged += (_, e) =>
+            Calendars.Add(new CalendarChoice(calendar, selected.Contains(calendar.Id)));
+            if (calendar.IsWritable)
             {
-                if (e.PropertyName == nameof(CalendarChoice.IsSelected) && calendar.IsWritable)
-                {
-                    if (choice.IsSelected)
-                    {
-                        sync.SelectedCalendarIds.Add(calendar.Id);
-                    }
-                    else
-                    {
-                        sync.SelectedCalendarIds.Remove(calendar.Id);
-                    }
-                }
-            };
-            Calendars.Add(choice);
+                SportTargets.Add(new CalendarOption(calendar.Id, calendar.Name));
+            }
         }
+
+        SportTarget = SportTargets.FirstOrDefault(o => o.Id == sportTargetId);
+        PrivateToWork = settings.PrivateWorkDetailLevel;
+        DigestTime = settings.DigestTime.ToTimeSpan();
+        Watchlist = string.Join(", ", settings.Watchlist);
+        Status = string.Empty;
+    }
+
+    [RelayCommand]
+    private async Task SaveAsync()
+    {
+        var current = await sync.GetUserSettingsAsync();
+        var updated = current with
+        {
+            HasCalendarSelection = true,
+            SelectedCalendarIds = Calendars.Where(c => c.CanSelect && c.IsSelected).Select(c => c.Calendar.Id).ToList(),
+            ActivityTargetCalendarId = SportTarget?.Id,
+            PrivateWorkDetailLevel = PrivateToWork,
+            DigestTime = TimeOnly.FromTimeSpan(DigestTime),
+            Watchlist = UserSettings.ParseWatchlist(Watchlist),
+        };
+
+        await sync.SaveUserSettingsAsync(updated);
+        Watchlist = string.Join(", ", updated.Watchlist);
+        Status = $"Gespeichert ({DateTime.Now:HH:mm}).";
     }
 
     [RelayCommand]

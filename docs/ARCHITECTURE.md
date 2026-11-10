@@ -32,7 +32,7 @@ flowchart LR
 | `Abstractions/` | `ICalendarProvider`, `ICalendarWriter`, `IActivityProvider`, `IMarketDataProvider`, `ISyncLedger`, `IExportService`, `INotificationService`, `ISecureTokenStore`, `IClock`, `IAccountConnector` |
 | `Sync/` | `SyncEngine`, `SyncPlan`/`SyncAction`, `SyncRules`, `ConflictResolver`, `CalendarWriteGate`, `EventMapping`, `DryRunReport` |
 | `Digest/` | `DailyDigestBuilder` |
-| `InMemory/` | `InMemoryCalendarProvider`, `InMemorySyncLedger`: Referenzimplementierungen für Tests und den Demo-Modus |
+| `InMemory/` | `InMemoryCalendarProvider`, `InMemorySyncLedger`, `InMemoryUserSettingsStore`: Referenzimplementierungen für Tests und den Demo-Modus |
 | `Common/` | `Result`/`Result<T>`, `Error`, `Errors`, `Guard`, `SystemClock`, `ReadOnlyCalendarException` |
 
 ### Zeitmodell
@@ -54,7 +54,7 @@ flowchart LR
 | `Strava/` | Mapper fertig; Provider/Connector als Stub (Phase 5) |
 | `Markets/` | `FinnhubMarketDataProvider` (fertig, getestet), `DemoMarketDataProvider` |
 | `Export/` | `ExcelExportService` (ClosedXML), `CsvExportService` (CsvHelper), beide fertig |
-| `Persistence/` | `LedgerSchema` (SQL), `SqliteSyncLedger` als Stub (Phase 1) |
+| `Persistence/` | `SqliteDatabase` (Verbindung + Migrationen), `DatabaseSchema`, `SqliteSyncLedger`, `SqliteUserSettingsStore`, alle fertig und getestet |
 | `Configuration/` | Options-Klassen |
 | `Demo/` | Beispieldaten für den Demo-Modus |
 
@@ -87,7 +87,7 @@ und Jitter mit, beachtet `Retry-After` bei HTTP 429 (wichtig für Strava), und e
 | Thema | Entscheidung | Begründung |
 |---|---|---|
 | .NET | 10 (LTS), MAUI 10.0.110 | aktuell stabil, langer Support |
-| Persistenz | **sqlite-net-pcl** (Phase 1) | schlank, auf iOS problemlos (kein EF-Interpreter-Modus nötig), Schema überschaubar |
+| Persistenz | **sqlite-net-pcl 1.11** | schlank, auf iOS problemlos (kein EF-Interpreter-Modus nötig), Schema überschaubar. Ab 1.11 mit SQLitePCLRaw 3.x; das ältere `SQLitePCLRaw.bundle_green` 2.1.x enthält eine SQLite mit bekannter Sicherheitslücke |
 | Excel | **ClosedXML** (MIT) | EPPlus ab v5 steht unter Polyform Noncommercial bzw. kommerzieller Lizenz |
 | CSV | CsvHelper | Standard, `;` als Trenner für Excel im deutschsprachigen Raum |
 | Marktdaten | **Finnhub** | 60 Req/min gratis, offizielle API. Contra: Free-Tier deckt vor allem US-Werte ab, Indizes daher über ETFs |

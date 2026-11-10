@@ -142,6 +142,7 @@ public sealed class SyncEngine
 
     private async Task PlanMirrorsAsync(RunContext run, List<SyncAction> actions, CancellationToken ct)
     {
+        var rules = run.Request.Rules ?? _rules;
         var loadedMirrors = run.MirrorCalendars.Where(c => run.Loaded.ContainsKey(c.Id)).ToList();
 
         foreach (var source in loadedMirrors)
@@ -168,7 +169,7 @@ public sealed class SyncEngine
                 foreach (var target in loadedMirrors.Where(t => t.Id != source.Id))
                 {
                     var entry = await _ledger.FindAsync(originKey, target.Id, ct).ConfigureAwait(false);
-                    var level = _rules.Resolve(source, target, sourceEvent);
+                    var level = rules.Resolve(source, target, sourceEvent);
 
                     if (level == MirrorDetailLevel.None)
                     {
@@ -180,7 +181,7 @@ public sealed class SyncEngine
                         continue;
                     }
 
-                    var mirror = EventMapping.ToMirror(sourceEvent, target, level, _rules);
+                    var mirror = EventMapping.ToMirror(sourceEvent, target, level, rules);
                     var origin = new Origin(originKey, source.Provider, source.Id, sourceEvent.Id, sourceEvent.Schedule.SortKeyUtc, sourceEvent.LastModifiedUtc, sourceEvent.Title);
                     actions.Add(PlanUpsert(run, origin, target, mirror, entry));
                 }
