@@ -18,6 +18,7 @@
     <PackageReference Include="CsvHelper" />
     <!-- SQLite: sqlite-net-pcl (MIT), bringt SQLitePCLRaw 3.x + native SQLite mit (iOS: System-SQLite). -->
     <PackageReference Include="sqlite-net-pcl" />
+    <PackageReference Include="Ical.Net" />
     <!-- Ab Phase 2-3: Microsoft.Identity.Client, Microsoft.Graph, Google.Apis.Calendar.v3 (Versionen stehen in Directory.Packages.props). -->
   </ItemGroup>
 
