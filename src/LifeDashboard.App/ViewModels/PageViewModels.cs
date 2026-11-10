@@ -69,9 +69,12 @@ public sealed partial class DigestViewModel(
     SyncCoordinator sync,
     DailyDigestBuilder builder,
     IMarketDataProvider markets,
-    INotificationService notifications) : ObservableObject
+    INotificationService notifications,
+    NewsCoordinator news) : ObservableObject
 {
     private DailyDigest? _digest;
+
+    public ObservableCollection<StoryItem> Headlines { get; } = [];
 
     public ObservableCollection<EventItem> Events { get; } = [];
 
@@ -102,9 +105,25 @@ public sealed partial class DigestViewModel(
             Quotes.Add(QuoteItem.From(q));
         }
 
-        Headline = _digest.ToNotificationText();
+        Headlines.Clear();
+        try
+        {
+            foreach (var story in (await news.GetStoriesAsync()).Take(5))
+            {
+                Headlines.Add(StoryItem.From(story, news));
+            }
+        }
+        catch (HttpRequestException)
+        {
+            // Ohne Netz bleibt der Digest ohne Schlagzeilen.
+        }
+
+        Headline = _digest.ToNotificationText() + (Headlines.Count > 0 ? $" · Top: {Headlines[0].Title}" : string.Empty);
         Status = $"Märkte: {markets.Name}";
     }
+
+    [RelayCommand]
+    private static Task OpenStoryAsync(StoryItem item) => Launcher.Default.OpenAsync(item.Link);
 
     [RelayCommand]
     private async Task NotifyAsync()

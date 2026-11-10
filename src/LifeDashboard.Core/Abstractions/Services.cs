@@ -23,6 +23,19 @@ public interface IMarketDataProvider
     Task<Result<IReadOnlyList<MarketQuote>>> GetQuotesAsync(IReadOnlyCollection<string> symbols, CancellationToken cancellationToken = default);
 }
 
+/// <summary>Ergebnis eines News-Abrufs: Meldungen plus Hinweise zu Feeds, die gerade nicht erreichbar waren.</summary>
+public sealed record NewsSnapshot(IReadOnlyList<NewsItem> Items, IReadOnlyList<string> FailedSources, DateTimeOffset FetchedUtc);
+
+/// <summary>Quelle für Schlagzeilen (offizielle RSS-/Atom-Feeds der Zeitungen, kein Scraping).</summary>
+public interface INewsProvider
+{
+    /// <summary>Konfigurierte Feeds.</summary>
+    IReadOnlyList<NewsFeed> Feeds { get; }
+
+    /// <summary>Lädt alle Feeds (mit HTTP-Caching). Fehlerhafte Feeds werden übersprungen und gemeldet.</summary>
+    Task<NewsSnapshot> GetLatestAsync(CancellationToken cancellationToken = default);
+}
+
 /// <summary>Exportformat.</summary>
 public enum ExportFormat
 {

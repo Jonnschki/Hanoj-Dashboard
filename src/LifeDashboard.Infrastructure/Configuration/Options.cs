@@ -66,8 +66,14 @@ public sealed class MarketDataOptions
 {
     public const string Section = "MarketData";
 
-    /// <summary>"Finnhub" oder "Demo".</summary>
-    public string Provider { get; set; } = "Demo";
+    /// <summary>
+    /// "Yahoo" (Standard; inoffiziell, mit Finnhub als Fallback, falls ein API-Key gesetzt ist),
+    /// "Finnhub" (nur offizielle API) oder "Demo" (feste Beispielwerte, kein Netzwerk).
+    /// </summary>
+    public string Provider { get; set; } = "Yahoo";
+
+    /// <summary>Basisadresse der Yahoo-Chart-API.</summary>
+    public Uri YahooBaseAddress { get; set; } = new("https://query1.finance.yahoo.com/");
 
     public string? ApiKey { get; set; }
 

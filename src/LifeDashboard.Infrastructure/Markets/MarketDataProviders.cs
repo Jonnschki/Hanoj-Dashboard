@@ -45,7 +45,7 @@ public sealed class FinnhubMarketDataProvider(HttpClient http, IOptions<MarketDa
                     continue;
                 }
 
-                quotes.Add(new MarketQuote(symbol, null, dto.Current, dto.Change ?? 0, dto.ChangePercent ?? 0, "USD", DateTimeOffset.FromUnixTimeSeconds(dto.Timestamp)));
+                quotes.Add(new MarketQuote(symbol, MarketSymbols.DisplayName(symbol), dto.Current, dto.Change ?? 0, dto.ChangePercent ?? 0, "USD", DateTimeOffset.FromUnixTimeSeconds(dto.Timestamp)) { Source = Name });
             }
             catch (HttpRequestException ex)
             {

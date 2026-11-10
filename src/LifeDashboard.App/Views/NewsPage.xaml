@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="LifeDashboard.App.Views.NewsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:LifeDashboard.App.ViewModels"
+    x:DataType="vm:NewsViewModel"
+    Title="News">
+
+    <RefreshView Command="{Binding LoadCommand}" IsRefreshing="{Binding IsBusy}">
+        <CollectionView ItemsSource="{Binding Stories}" Margin="{OnIdiom Phone='16,0', Default='28,0'}" SelectionMode="None">
+            <CollectionView.Header>
+                <VerticalStackLayout Padding="0,16,0,8" Spacing="10" MaximumWidthRequest="1000">
+                    <Label Text="Schlagzeilen" Style="{StaticResource PageTitle}" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Picker ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" Title="Thema" />
+                        <Picker Grid.Column="1" ItemsSource="{Binding Regions}" SelectedItem="{Binding SelectedRegion}" Title="Region" />
+                    </Grid>
+                    <Label Text="{Binding Status}" Style="{StaticResource Muted}" />
+                    <Label Text="Sortiert nach Relevanz: je mehr Zeitungen berichten und je aktueller, desto weiter oben. Aktualisiert sich alle 5 Minuten." Style="{StaticResource Muted}" FontSize="11" />
+                </VerticalStackLayout>
+            </CollectionView.Header>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:StoryItem">
+                    <Border Style="{StaticResource Tile}" Padding="14" Margin="0,0,0,8" MaximumWidthRequest="1000">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenCommand, Source={RelativeSource AncestorType={x:Type vm:NewsViewModel}}, x:DataType=vm:NewsViewModel}" CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding Title}" FontAttributes="Bold" FontSize="16" />
+                            <Label Text="{Binding Summary}" Style="{StaticResource Muted}" MaxLines="2" LineBreakMode="TailTruncation" IsVisible="{Binding HasSummary}" />
+                            <Label Text="{Binding Meta}" Style="{StaticResource Muted}" FontSize="12" />
+                            <Label Text="{Binding OtherSources}" Style="{StaticResource Badge}" IsVisible="{Binding HasOtherSources}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+            <CollectionView.EmptyView>
+                <Label Text="Keine Schlagzeilen geladen." Style="{StaticResource Muted}" Margin="0,24" />
+            </CollectionView.EmptyView>
+        </CollectionView>
+    </RefreshView>
+</ContentPage>

@@ -31,7 +31,11 @@ public sealed record MarketQuote(
     decimal Change,
     decimal ChangePercent,
     string Currency,
-    DateTimeOffset AsOfUtc);
+    DateTimeOffset AsOfUtc)
+{
+    /// <summary>Datenquelle dieses Kurses (z. B. "Yahoo Finance" oder "Finnhub").</summary>
+    public string? Source { get; init; }
+}
 
 /// <summary>Status eines Sync-Laufs.</summary>
 public enum SyncRunStatus

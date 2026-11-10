@@ -10,5 +10,6 @@ public partial class AppShell : Shell
 
         // Push-Route für die Einstellungen (iPhone: über Zahnrad-Symbol; Desktop: zusätzlich im Flyout).
         Routing.RegisterRoute("settings", typeof(SettingsPage));
+        Routing.RegisterRoute("sportdetail", typeof(SportPage));
     }
 }

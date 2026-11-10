@@ -23,9 +23,11 @@
 
     <FlyoutItem Title="Übersicht" FlyoutDisplayOptions="AsMultipleItems" Shell.TabBarIsVisible="{OnIdiom Desktop=False, Default=True}">
         <ShellContent Title="Dashboard" Icon="tab_dashboard.png" Route="dashboard" ContentTemplate="{DataTemplate views:DashboardPage}" />
+        <ShellContent Title="News" Icon="tab_news.png" Route="news" ContentTemplate="{DataTemplate views:NewsPage}" />
         <ShellContent Title="Sync" Icon="tab_sync.png" Route="sync" ContentTemplate="{DataTemplate views:SyncPage}" />
         <ShellContent Title="Kalender" Icon="tab_calendar.png" Route="calendar" ContentTemplate="{DataTemplate views:CalendarPage}" />
-        <ShellContent Title="Sport" Icon="tab_sport.png" Route="sport" ContentTemplate="{DataTemplate views:SportPage}" />
+        <!-- Sport nur auf dem Desktop als eigener Eintrag (iPhone: max. 5 Tabs → über die Dashboard-Kachel, Route "sportdetail"). -->
+        <ShellContent Title="Sport" Icon="tab_sport.png" Route="sport" ContentTemplate="{DataTemplate views:SportPage}" IsVisible="{OnIdiom Desktop=True, Default=False}" />
         <ShellContent Title="Digest" Icon="tab_digest.png" Route="digest" ContentTemplate="{DataTemplate views:DigestPage}" />
     </FlyoutItem>
 

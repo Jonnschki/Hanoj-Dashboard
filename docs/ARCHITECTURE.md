@@ -52,7 +52,8 @@ flowchart LR
 | `GoogleCalendar/` | Stub (Phase 3): `GoogleCalendarProvider`, `GoogleAccountConnector` |
 | `Ics/` | `IcsParser` (Ical.Net: Serien, EXDATE/RECURRENCE-ID, Windows→IANA-Zeitzonen, Ganztags) und `IcsCalendarProvider` (Abos aus den Einstellungen, URL aus dem sicheren Speicher, immer read-only), fertig und getestet |
 | `Strava/` | Mapper fertig; Provider/Connector als Stub (Phase 5) |
-| `Markets/` | `FinnhubMarketDataProvider` (fertig, getestet), `DemoMarketDataProvider` |
+| `Markets/` | `YahooFinanceMarketDataProvider` (inoffiziell, Standard), `FinnhubMarketDataProvider` (offiziell), `FallbackMarketDataProvider` (Yahoo → Finnhub pro fehlendem Symbol), `DemoMarketDataProvider` |
+| `News/` | `FeedParser` (RSS 2.0, RDF, Atom; DTDs verboten), `NewsFeedCatalog` (Qualitätsmedien AT/DE/EU/international), `RssNewsProvider` (paralleles Laden, ETag/Last-Modified, Mindestabstand pro Feed) |
 | `Export/` | `ExcelExportService` (ClosedXML), `CsvExportService` (CsvHelper), beide fertig |
 | `Persistence/` | `SqliteDatabase` (Verbindung + Migrationen), `DatabaseSchema`, `SqliteSyncLedger`, `SqliteUserSettingsStore`, alle fertig und getestet |
 | `Configuration/` | Options-Klassen |
@@ -91,6 +92,7 @@ und Jitter mit, beachtet `Retry-After` bei HTTP 429 (wichtig für Strava), und e
 | Excel | **ClosedXML** (MIT) | EPPlus ab v5 steht unter Polyform Noncommercial bzw. kommerzieller Lizenz |
 | ICS | **Ical.Net 5** (MIT) mit NodaTime | RFC-5545-Serienlogik selbst zu bauen wäre fehleranfällig; Ical.Net kann RRULE, EXDATE, RECURRENCE-ID und Outlook-Zeitzonen |
 | CSV | CsvHelper | Standard, `;` als Trenner für Excel im deutschsprachigen Raum |
-| Marktdaten | **Finnhub** | 60 Req/min gratis, offizielle API. Contra: Free-Tier deckt vor allem US-Werte ab, Indizes daher über ETFs |
+| Marktdaten | **Yahoo Finance + Finnhub-Fallback** | Auf Wunsch des Nutzers Yahoo (beste Abdeckung für ATX/DAX/EU, aber inoffiziell/Grauzone); Finnhub (offiziell, 60 Req/min gratis, v. a. US) übernimmt fehlende Symbole und Ausfälle |
+| News | **Offizielle RSS-Feeds + eigener Ranker** | Kein Scraping. Relevanz = Anzahl unabhängiger Zeitungen, die dieselbe Geschichte bringen, + Aktualität (`Core/News/HeadlineRanker`); nachvollziehbar und ohne Kosten (keine KI) |
 | Assertions | FluentAssertions **7.x** | ab v8 kommerzielle Lizenz (Xceed); 7.x ist Apache-2.0 |
 | Resilienz | Microsoft.Extensions.Http.Resilience | offizielle Polly-v8-Integration für HttpClientFactory |

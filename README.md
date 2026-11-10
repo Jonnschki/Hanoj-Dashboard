@@ -25,7 +25,9 @@ Voraussetzungen und iOS-Setup: [docs/SETUP.md](docs/SETUP.md).
 | F4 | On-Demand-Refresh mit Fortschritt und Protokoll | ✅ (Demo) |
 | F5 | Export Excel/CSV | Services ✅, UI teilweise |
 | F6 | Daily Digest (Termine + Märkte, Benachrichtigung) | Builder ✅, Notification ⏳ |
-| F7 | Dashboard mit Kacheln | ✅ (Demo) |
+| F7 | Dashboard mit Kacheln | ✅ |
+| F8 | Börse live (ATX, DAX, Euro Stoxx, US, Devisen; Yahoo + Finnhub-Fallback) | ✅ |
+| F9 | Schlagzeilen aus Qualitätsmedien AT/DE/EU, nach Relevanz, alle 5 Min. aktualisiert | ✅ |
 
 ## Dokumentation
 - [Architektur](docs/ARCHITECTURE.md)

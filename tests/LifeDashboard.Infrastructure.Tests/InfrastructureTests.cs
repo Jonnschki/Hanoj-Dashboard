@@ -153,6 +153,7 @@ public sealed class DependencyInjectionTests
         report.Created.Should().BeGreaterThan(0);
         provider.GetServices<IExportService>().Should().HaveCount(2);
         provider.GetServices<IAccountConnector>().Should().HaveCount(3);
-        provider.GetRequiredService<IMarketDataProvider>().Should().BeOfType<DemoMarketDataProvider>();
+        provider.GetRequiredService<IMarketDataProvider>().Should().BeOfType<FallbackMarketDataProvider>("Standard ist Yahoo (ohne Finnhub-Key kein Fallback)");
+        provider.GetRequiredService<INewsProvider>().Feeds.Should().NotBeEmpty();
     }
 }
