@@ -119,17 +119,52 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddMarketData(this IServiceCollection services, IConfiguration configuration)
     {
         var options = configuration.GetSection(MarketDataOptions.Section).Get<MarketDataOptions>() ?? new MarketDataOptions();
-        if (string.Equals(options.Provider, "Finnhub", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(options.ApiKey))
+        var hasFinnhubKey = !string.IsNullOrWhiteSpace(options.ApiKey);
+
+        if (string.Equals(options.Provider, "Demo", StringComparison.OrdinalIgnoreCase))
         {
-            services.AddHttpClient<IMarketDataProvider, FinnhubMarketDataProvider>((sp, client) =>
+            services.AddSingleton<IMarketDataProvider, DemoMarketDataProvider>();
+            return services;
+        }
+
+        if (hasFinnhubKey)
+        {
+            services.AddHttpClient<FinnhubMarketDataProvider>((sp, client) =>
                     client.BaseAddress = sp.GetRequiredService<IOptions<MarketDataOptions>>().Value.BaseAddress)
                 .AddStandardResilienceHandler();
         }
-        else
+
+        if (string.Equals(options.Provider, "Finnhub", StringComparison.OrdinalIgnoreCase) && hasFinnhubKey)
         {
-            services.AddSingleton<IMarketDataProvider, DemoMarketDataProvider>();
+            services.AddSingleton<IMarketDataProvider>(sp => sp.GetRequiredService<FinnhubMarketDataProvider>());
+            return services;
         }
 
+        // Standard: Yahoo, bei fehlenden Symbolen/Ausfall Finnhub (falls API-Key vorhanden).
+        services.AddHttpClient<YahooFinanceMarketDataProvider>((sp, client) =>
+            {
+                client.BaseAddress = sp.GetRequiredService<IOptions<MarketDataOptions>>().Value.YahooBaseAddress;
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) LifeDashboard/0.1"); // ohne User-Agent antwortet Yahoo mit 429
+            })
+            .AddStandardResilienceHandler();
+        services.AddSingleton<IMarketDataProvider>(sp => new FallbackMarketDataProvider(
+            sp.GetRequiredService<YahooFinanceMarketDataProvider>(),
+            hasFinnhubKey ? sp.GetRequiredService<FinnhubMarketDataProvider>() : null,
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<FallbackMarketDataProvider>>()));
+        return services;
+    }
+
+    /// <summary>Schlagzeilen aus offiziellen RSS-Feeds (Singleton, damit der HTTP-Cache erhalten bleibt).</summary>
+    public static IServiceCollection AddNews(this IServiceCollection services)
+    {
+        services.AddHttpClient<News.RssNewsProvider>(client =>
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("LifeDashboard/0.1 (private RSS reader)");
+                client.MaxResponseContentBufferSize = 5 * 1024 * 1024;
+            })
+            .AddStandardResilienceHandler();
+        services.AddSingleton<INewsProvider>(sp => sp.GetRequiredService<News.RssNewsProvider>());
+        services.AddSingleton<Core.News.HeadlineRanker>();
         return services;
     }
 
@@ -152,5 +187,6 @@ public static class ServiceCollectionExtensions
         .AddCalendars(configuration)
         .AddActivities(configuration)
         .AddMarketData(configuration)
+        .AddNews()
         .AddExport();
 }
