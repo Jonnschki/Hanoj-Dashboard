@@ -66,13 +66,11 @@ public sealed partial class SportViewModel(IActivityProvider activities, IClock 
 
 /// <summary>Daily Digest: heutige Termine + Märkte.</summary>
 public sealed partial class DigestViewModel(
-    SyncCoordinator sync,
-    DailyDigestBuilder builder,
-    IMarketDataProvider markets,
+    DigestService digest,
     INotificationService notifications,
     NewsCoordinator news) : ObservableObject
 {
-    private DailyDigest? _digest;
+    private DigestContent? _content;
 
     public ObservableCollection<StoryItem> Headlines { get; } = [];
 
@@ -89,37 +87,28 @@ public sealed partial class DigestViewModel(
     [RelayCommand]
     private async Task BuildAsync()
     {
-        var events = await sync.GetEventsAsync(builder.TodayRange());
-        var quotes = await markets.GetQuotesAsync(await sync.GetWatchlistAsync());
-        _digest = builder.Build(events.Select(e => e.Event), quotes.IsSuccess ? quotes.Value : [], markets.Name);
+        _content = await digest.BuildAsync();
 
         Events.Clear();
-        foreach (var e in _digest.TodaysEvents)
+        foreach (var (calendar, e) in _content.Events)
         {
-            Events.Add(EventItem.From(events.First(x => x.Event == e).Calendar, e, includeDate: false));
+            Events.Add(EventItem.From(calendar, e, includeDate: false));
         }
 
         Quotes.Clear();
-        foreach (var q in _digest.Quotes)
+        foreach (var q in _content.Digest.Quotes)
         {
             Quotes.Add(QuoteItem.From(q));
         }
 
         Headlines.Clear();
-        try
+        foreach (var story in _content.Headlines)
         {
-            foreach (var story in (await news.GetStoriesAsync()).Take(5))
-            {
-                Headlines.Add(StoryItem.From(story, news));
-            }
-        }
-        catch (HttpRequestException)
-        {
-            // Ohne Netz bleibt der Digest ohne Schlagzeilen.
+            Headlines.Add(StoryItem.From(story, news));
         }
 
-        Headline = _digest.ToNotificationText() + (Headlines.Count > 0 ? $" · Top: {Headlines[0].Title}" : string.Empty);
-        Status = $"Märkte: {markets.Name}";
+        Headline = _content.NotificationText;
+        Status = $"Märkte: {_content.MarketSource}";
     }
 
     [RelayCommand]
@@ -128,13 +117,16 @@ public sealed partial class DigestViewModel(
     [RelayCommand]
     private async Task NotifyAsync()
     {
-        if (_digest is null)
+        if (_content is null)
         {
             await BuildAsync();
         }
 
-        await notifications.ShowAsync("Dein Tag", _digest!.ToNotificationText());
-        Status = "Benachrichtigung gesendet (Stub: siehe Debug-Log, echte Notification ab Phase 7).";
+        var allowed = await notifications.EnsurePermissionAsync();
+        await notifications.ShowAsync("Dein Tag", _content!.NotificationText);
+        Status = allowed
+            ? "Benachrichtigung gesendet (siehe Windows-Infocenter)."
+            : "Benachrichtigungen sind in Windows für diese App deaktiviert (Einstellungen → System → Benachrichtigungen).";
     }
 }
 
@@ -143,6 +135,7 @@ public sealed partial class SettingsViewModel(
     SyncCoordinator sync,
     IEnumerable<IAccountConnector> connectors,
     IEnumerable<IExportService> exporters,
+    IActivityProvider activities,
     IOptions<MarketDataOptions> marketOptions,
     IClock clock) : ObservableObject
 {
@@ -316,15 +309,45 @@ public sealed partial class SettingsViewModel(
     [RelayCommand]
     private Task ExportCsvAsync() => ExportAsync(ExportFormat.Csv);
 
+    [RelayCommand]
+    private async Task ExportSportAsync()
+    {
+        var result = await activities.GetActivitiesAsync(clock.UtcNow.AddDays(-365));
+        if (result.IsFailure)
+        {
+            Status = result.Error.Message;
+            return;
+        }
+
+        await SaveAsync("Sport", ExportFormat.Xlsx, (exporter, stream) => exporter.ExportActivitiesAsync(result.Value, stream));
+    }
+
+    [RelayCommand]
+    private async Task ExportSyncLogAsync()
+    {
+        if (sync.LastReport is not { } report)
+        {
+            Status = "Noch kein Sync in dieser Sitzung. Bitte zuerst einen Sync (oder Dry-Run) starten.";
+            return;
+        }
+
+        await SaveAsync("SyncProtokoll", ExportFormat.Xlsx, (exporter, stream) => exporter.ExportSyncLogAsync(report.Log, stream));
+    }
+
     private async Task ExportAsync(ExportFormat format)
     {
-        var exporter = exporters.First(e => e.Format == format);
         var events = await sync.GetEventsAsync(DateRange.Around(clock.UtcNow, TimeSpan.FromDays(30), TimeSpan.FromDays(60)));
+        await SaveAsync("Termine", format, (exporter, stream) => exporter.ExportEventsAsync(events.Select(e => e.Event), stream));
+    }
+
+    private async Task SaveAsync(string name, ExportFormat format, Func<IExportService, Stream, Task> write)
+    {
+        var exporter = exporters.First(e => e.Format == format);
         using var stream = new MemoryStream();
-        await exporter.ExportEventsAsync(events.Select(e => e.Event), stream);
+        await write(exporter, stream);
         stream.Position = 0;
 
-        var result = await FileSaver.Default.SaveAsync($"Termine_{DateTime.Now:yyyyMMdd}{exporter.FileExtension}", stream);
+        var result = await FileSaver.Default.SaveAsync($"{name}_{DateTime.Now:yyyyMMdd}{exporter.FileExtension}", stream);
         Status = result.IsSuccessful ? $"Gespeichert: {result.FilePath}" : $"Export abgebrochen: {result.Exception?.Message}";
     }
 }

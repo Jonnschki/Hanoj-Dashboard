@@ -4,11 +4,17 @@
 Outlook und Google, spiegelt sie zwischen den eigenen Kalendern, holt Strava-Aktivitäten in den Kalender und
 zeigt einen Tages-Digest mit Märkten. Danach muss man nur noch in den Kalender schauen.
 
-> **Status: Phase 2a (ICS-Abos) abgeschlossen.** Die App läuft im Demo-Modus mit Beispieldaten. Sync-Engine, SQLite-Ledger,
-> gespeicherte Einstellungen und echte ICS-Abos fremder Kalender sind fertig und getestet; die Anbindungen an Microsoft,
-> Google und Strava folgen laut [Roadmap](docs/ROADMAP.md).
+> **Status: Windows-Version einsatzbereit.** Outlook, Google, Strava, ICS-Abos, Börse, Schlagzeilen, Export und
+> Windows-Benachrichtigungen sind fertig und getestet. Für echte Konten brauchst du einmalig die App-Registrierungen
+> ([Erste Schritte](docs/ERSTE_SCHRITTE.md)); ohne sie läuft die App im Demo-Modus. Die iPhone-Version folgt (braucht Mac/TestFlight).
 
-## Schnellstart (Windows)
+## Installieren (Windows)
+👉 **[Erste Schritte](docs/ERSTE_SCHRITTE.md)**: Registrierungen, Zugangsdaten, Installation per Skript, erster Sync.
+```bash
+powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
+```
+
+## Entwickeln (Windows)
 ```bash
 dotnet build LifeDashboard.slnx
 dotnet test LifeDashboard.slnx
@@ -22,9 +28,9 @@ Voraussetzungen und iOS-Setup: [docs/SETUP.md](docs/SETUP.md).
 | F1 | Kalender-Sync Outlook ↔ Google (Spiegelung zwischen eigenen Kalendern) | ✅ (Login über Einstellungen → Konten) |
 | F2 | Fremde Kalender (Kunden, Partner) **read-only** einblenden | ICS-Abo ✅ |
 | F3 | Strava → Kalender | ✅ (Login über Einstellungen → Konten) |
-| F4 | On-Demand-Refresh mit Fortschritt und Protokoll | ✅ (Demo) |
-| F5 | Export Excel/CSV | Services ✅, UI teilweise |
-| F6 | Daily Digest (Termine + Märkte, Benachrichtigung) | Builder ✅, Notification ⏳ |
+| F4 | On-Demand-Refresh mit Fortschritt, Protokoll und Verlauf | ✅ |
+| F5 | Export Excel/CSV (Termine, Sport, Sync-Protokoll) | ✅ |
+| F6 | Daily Digest (Termine, Märkte, Schlagzeilen, Windows-Benachrichtigung) | ✅ Windows · iPhone ⏳ |
 | F7 | Dashboard mit Kacheln | ✅ |
 | F8 | Börse live (ATX, DAX, Euro Stoxx, US, Devisen; Yahoo + Finnhub-Fallback) | ✅ |
 | F9 | Schlagzeilen aus Qualitätsmedien AT/DE/EU, nach Relevanz, alle 5 Min. aktualisiert | ✅ |

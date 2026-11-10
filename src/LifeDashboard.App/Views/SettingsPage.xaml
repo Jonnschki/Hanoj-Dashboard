@@ -106,10 +106,12 @@
                     HorizontalOptions="{OnIdiom Phone=Fill, Default=Start}" WidthRequest="{OnIdiom Phone=-1, Default=280}" />
 
             <controls:TileView Title="Export">
-                <HorizontalStackLayout Spacing="10">
-                    <Button Text="Termine → Excel" Style="{StaticResource SecondaryButton}" Command="{Binding ExportExcelCommand}" />
-                    <Button Text="Termine → CSV" Style="{StaticResource SecondaryButton}" Command="{Binding ExportCsvCommand}" />
-                </HorizontalStackLayout>
+                <FlexLayout Wrap="Wrap" JustifyContent="Start">
+                    <Button Text="Termine → Excel" Style="{StaticResource SecondaryButton}" Command="{Binding ExportExcelCommand}" Margin="0,0,10,10" />
+                    <Button Text="Termine → CSV" Style="{StaticResource SecondaryButton}" Command="{Binding ExportCsvCommand}" Margin="0,0,10,10" />
+                    <Button Text="Sport (12 Monate) → Excel" Style="{StaticResource SecondaryButton}" Command="{Binding ExportSportCommand}" Margin="0,0,10,10" />
+                    <Button Text="Sync-Protokoll → Excel" Style="{StaticResource SecondaryButton}" Command="{Binding ExportSyncLogCommand}" Margin="0,0,10,10" />
+                </FlexLayout>
             </controls:TileView>
 
             <Label Text="{Binding Status}" Style="{StaticResource Muted}" />

@@ -12,6 +12,7 @@ dotnet build src/LifeDashboard.App -p:EnableIos=true                       # iOS
 ```
 - SDK ist über `global.json` fixiert (10.0.4xx). Paketversionen **nur** in `Directory.Packages.props` (Central Package Management) pflegen.
   In `.csproj`-Dateien `<PackageReference Include="…" />` **ohne** Version.
+- Installation für den Nutzer: `scripts/install-windows.ps1` (self-contained Publish nach `%LOCALAPPDATA%\Programs\LifeDashboard`, Startmenü). Nutzerdaten liegen unter `%LOCALAPPDATA%\Hanoj\at.hanoj.lifedashboard` (Ordnername kommt aus `PublisherDisplayName` in `Platforms/Windows/Package.appxmanifest`, nicht ändern, sonst gehen Daten „verloren“). `.ps1`-Dateien nur mit ASCII-Text (PowerShell 5 liest sie ohne BOM als ANSI).
 - Lange Pfade: In tief verschachtelten Ordnern (Worktrees) kann der Release-Build der Windows-App an MAX_PATH scheitern (MSB3030). Das ist kein Code-Fehler.
 
 ## Architekturregeln (strikt)
