@@ -24,7 +24,7 @@ public sealed class MicrosoftOptions
     /// <summary>"common" (Arbeit + privat), "organizations" oder konkrete Tenant-ID.</summary>
     public string TenantId { get; set; } = "common";
 
-    /// <summary>Redirect-URI, z. B. "msal{ClientId}://auth" (iOS) bzw. "http://localhost" (Windows).</summary>
+    /// <summary>Redirect-URI, z. B. "msauth.at.hanoj.lifedashboard://auth" (iOS) bzw. "http://localhost" (Windows).</summary>
     public string? RedirectUri { get; set; }
 
     public IReadOnlyList<string> Scopes { get; set; } = ["User.Read", "Calendars.ReadWrite", "Calendars.Read.Shared", "offline_access"];
@@ -54,7 +54,7 @@ public sealed class StravaOptions
 
     public string? ClientSecret { get; set; }
 
-    public string RedirectUri { get; set; } = "lifedashboard://strava-callback";
+    public string RedirectUri { get; set; } = "lifedashboard://localhost/strava";
 
     public Uri BaseAddress { get; set; } = new("https://www.strava.com/api/v3/");
 
