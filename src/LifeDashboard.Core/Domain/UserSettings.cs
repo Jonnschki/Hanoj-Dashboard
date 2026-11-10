@@ -30,6 +30,13 @@ public sealed record UserSettings
     /// <summary>Eigene Watchlist. Leer = Watchlist aus appsettings.json verwenden.</summary>
     public IReadOnlyList<string> Watchlist { get; init; } = [];
 
+    /// <summary>
+    /// Abonnierte ICS-Kalender fremder Personen/Firmen (immer read-only).
+    /// Die URL selbst ist geheim und liegt NICHT hier, sondern im <see cref="Abstractions.ISecureTokenStore"/>
+    /// unter <see cref="IcsSubscription.SecretKey"/>.
+    /// </summary>
+    public IReadOnlyList<IcsSubscription> IcsSubscriptions { get; init; } = [];
+
     /// <summary>Spiegelungsregeln aus den Einstellungen. Gleiche Kategorie spiegelt immer voll.</summary>
     public SyncRules ToRules() => new()
     {
