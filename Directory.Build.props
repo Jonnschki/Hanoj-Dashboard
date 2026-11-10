@@ -1,0 +1,25 @@
+<Project>
+  <!-- Gilt für alle Projekte im Repo. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <Deterministic>true</Deterministic>
+    <!-- XML-Doku erzeugen; fehlende Doku (CS1591) ist kein Fehler, Interfaces werden trotzdem dokumentiert. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!-- Kern und Infrastruktur: Warnungen sind Fehler. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'LifeDashboard.Core' Or '$(MSBuildProjectName)' == 'LifeDashboard.Infrastructure'">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+</Project>
