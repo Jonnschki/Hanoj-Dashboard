@@ -48,8 +48,10 @@ flowchart LR
 
 | Ordner | Status |
 |---|---|
-| `MicrosoftGraph/` | Stub (Phase 2): `GraphCalendarProvider`, `MsalAccountConnector` |
-| `GoogleCalendar/` | Stub (Phase 3): `GoogleCalendarProvider`, `GoogleAccountConnector` |
+| `Auth/` | `OAuthSession` (Authorization Code + PKCE, Token-Erneuerung, Tokens nur im sicheren Speicher), `LoopbackBrowser` (System-Browser + Rückleitung auf `http://127.0.0.1:<Port>` per TcpListener, ohne Admin-Rechte), `OAuthAccountConnector` |
+| `MicrosoftGraph/` | `MicrosoftSession` (MSAL, Token-Cache im sicheren Speicher), `GraphCalendarProvider` (REST: calendars, calendarView mit Paging, POST/PATCH/DELETE, Marker als Single-Value Extended Property) |
+| `GoogleCalendar/` | `GoogleCalendarProvider` (REST: calendarList, events mit `singleEvents` und Paging, Marker in `extendedProperties.private`), `GoogleOAuth` |
+| `Common/` | `RestCalendarHelpers` (Bearer-Token, Fehlerabbildung 401/404/410, Marker-JSON, Windows→IANA) |
 | `Ics/` | `IcsParser` (Ical.Net: Serien, EXDATE/RECURRENCE-ID, Windows→IANA-Zeitzonen, Ganztags) und `IcsCalendarProvider` (Abos aus den Einstellungen, URL aus dem sicheren Speicher, immer read-only), fertig und getestet |
 | `Strava/` | Mapper fertig; Provider/Connector als Stub (Phase 5) |
 | `Markets/` | `YahooFinanceMarketDataProvider` (inoffiziell, Standard), `FinnhubMarketDataProvider` (offiziell), `FallbackMarketDataProvider` (Yahoo → Finnhub pro fehlendem Symbol), `DemoMarketDataProvider` |
@@ -95,4 +97,7 @@ und Jitter mit, beachtet `Retry-After` bei HTTP 429 (wichtig für Strava), und e
 | Marktdaten | **Yahoo Finance + Finnhub-Fallback** | Auf Wunsch des Nutzers Yahoo (beste Abdeckung für ATX/DAX/EU, aber inoffiziell/Grauzone); Finnhub (offiziell, 60 Req/min gratis, v. a. US) übernimmt fehlende Symbole und Ausfälle |
 | News | **Offizielle RSS-Feeds + eigener Ranker** | Kein Scraping. Relevanz = Anzahl unabhängiger Zeitungen, die dieselbe Geschichte bringen, + Aktualität (`Core/News/HeadlineRanker`); nachvollziehbar und ohne Kosten (keine KI) |
 | Assertions | FluentAssertions **7.x** | ab v8 kommerzielle Lizenz (Xceed); 7.x ist Apache-2.0 |
-| Resilienz | Microsoft.Extensions.Http.Resilience | offizielle Polly-v8-Integration für HttpClientFactory |
+| Resilienz | Microsoft.Extensions.Http.Resilience | offizielle Polly-v8-Integration für HttpClientFactory. Für Kalender-APIs `DisableForUnsafeHttpMethods()` (ein wiederholtes POST könnte Termine doppelt anlegen), Token-Endpunkte ganz ohne Retry (Codes sind einmalig) |
+| Kalender-APIs | **REST statt Graph-/Google-SDK** | nur ~6 Endpunkte nötig; SDKs bringen > 50 MB und erschweren Tests sowie iOS-Trimming |
+| Microsoft-Login | **MSAL.NET** (MIT) | offizielle Bibliothek, System-Browser, stille Token-Erneuerung |
+| Google-/Strava-Login | eigener OAuth-Ablauf | RFC 8252 (Loopback + PKCE), kein zusätzliches Paket nötig |

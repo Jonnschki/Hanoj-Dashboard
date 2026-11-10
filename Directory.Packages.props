@@ -25,8 +25,7 @@
 
   <ItemGroup Label="Integrationen (ab Phase 1-7 referenziert)">
     <PackageVersion Include="Microsoft.Identity.Client" Version="4.92.0" />
-    <PackageVersion Include="Microsoft.Graph" Version="6.10.0" />
-    <PackageVersion Include="Google.Apis.Calendar.v3" Version="1.78.0.4320" />
+    <!-- Graph und Google Calendar werden per REST angesprochen (kein SDK nötig, siehe docs/ARCHITECTURE.md). -->
     <!-- 1.11.x bringt SQLitePCLRaw 3.x mit aktueller SQLite mit. SQLitePCLRaw 2.1.x (bundle_green) hat eine bekannte Sicherheitslücke (GHSA-2m69-gcr7-jv3q). -->
     <PackageVersion Include="sqlite-net-pcl" Version="1.11.285" />
     <!-- ICS/iCalendar (MIT), nutzt NodaTime (Apache-2.0) für Zeitzonen inkl. Windows-Namen aus Outlook. -->

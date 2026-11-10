@@ -291,16 +291,23 @@ public sealed partial class SettingsViewModel(
     [RelayCommand]
     private async Task ToggleAccountAsync(AccountItem item)
     {
+        string message;
         if (item.IsConnected)
         {
             await item.Connector.DisconnectAsync();
-            item.IsConnected = false;
-            return;
+            message = $"{item.Name} getrennt.";
+        }
+        else
+        {
+            Status = $"{item.Name}: Anmeldung im Browser abschließen …";
+            var result = await item.Connector.ConnectAsync();
+            message = result.IsSuccess ? $"{item.Name} verbunden als {result.Value.DisplayName}." : result.Error.Message;
         }
 
-        var result = await item.Connector.ConnectAsync();
-        item.IsConnected = result.IsSuccess;
-        Status = result.IsSuccess ? $"{item.Name} verbunden." : result.Error.Message;
+        // Neue/entfernte Kalender sofort in Auswahl, Dashboard und Sync berücksichtigen.
+        sync.InvalidateCalendars();
+        await LoadAsync(); // lädt auch den Verbindungsstatus neu (und leert Status)
+        Status = message;
     }
 
     [RelayCommand]

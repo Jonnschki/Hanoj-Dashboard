@@ -32,6 +32,7 @@ public static class MauiProgram
 
         // Plattformspezifische Dienste.
         builder.Services.AddSingleton<ISecureTokenStore, MauiSecureTokenStore>();
+        builder.Services.AddSingleton<IUrlLauncher, MauiUrlLauncher>();
         builder.Services.AddSingleton<INotificationService, LocalNotificationService>();
         builder.Services.AddSingleton<SyncCoordinator>();
         builder.Services.AddSingleton<NewsCoordinator>();

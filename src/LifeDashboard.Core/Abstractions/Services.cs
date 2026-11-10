@@ -107,6 +107,22 @@ public interface IClock
     TimeZoneInfo LocalTimeZone { get; }
 }
 
+/// <summary>Öffnet eine URL im System-Browser (für OAuth-Logins). Plattformspezifisch, wird von der App bereitgestellt.</summary>
+public interface IUrlLauncher
+{
+    Task OpenAsync(Uri url, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Liefert ein gültiges Zugriffstoken für eine API (erneuert es bei Bedarf still im Hintergrund).</summary>
+public interface IAccessTokenSource
+{
+    /// <summary>Verbundenes Konto oder null.</summary>
+    CalendarAccount? Account { get; }
+
+    /// <summary>Token oder Fehler <c>auth.not_connected</c>, wenn (erneut) eine Anmeldung nötig ist.</summary>
+    Task<Result<string>> GetAccessTokenAsync(CancellationToken cancellationToken = default);
+}
+
 /// <summary>Verbinden/Trennen eines Kontos (OAuth-Login), für die Einstellungsseite.</summary>
 public interface IAccountConnector
 {

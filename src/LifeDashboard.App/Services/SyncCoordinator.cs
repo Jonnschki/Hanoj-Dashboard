@@ -56,6 +56,9 @@ public sealed class SyncCoordinator(
         return list;
     }
 
+    /// <summary>Kalenderliste neu laden lassen (z. B. nach dem Verbinden eines Kontos).</summary>
+    public void InvalidateCalendars() => _calendars = null;
+
     /// <summary>Gespeicherte Nutzereinstellungen (gecacht).</summary>
     public async Task<UserSettings> GetUserSettingsAsync(CancellationToken ct = default)
         => _userSettings ??= await settingsStore.LoadAsync(ct);

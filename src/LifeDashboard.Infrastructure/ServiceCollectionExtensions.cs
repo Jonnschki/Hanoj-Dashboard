@@ -1,6 +1,7 @@
 using LifeDashboard.Core.Abstractions;
 using LifeDashboard.Core.Common;
 using LifeDashboard.Core.Digest;
+using LifeDashboard.Core.Domain;
 using LifeDashboard.Core.InMemory;
 using LifeDashboard.Core.Sync;
 using LifeDashboard.Infrastructure.Configuration;
@@ -10,6 +11,7 @@ using LifeDashboard.Infrastructure.Markets;
 using LifeDashboard.Infrastructure.Strava;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 
 namespace LifeDashboard.Infrastructure;
@@ -80,7 +82,19 @@ public static class ServiceCollectionExtensions
             }
         }
 
-        // Phase 2/3: Microsoft-/Google-Provider pro verbundenem Konto.
+        AddAccounts(services, configuration);
+
+        if (!app.UseDemoData)
+        {
+            // Kalender-APIs: Wiederholungen nur für sichere Methoden (GET/DELETE …), sonst könnte ein
+            // wiederholtes POST einen Termin doppelt anlegen.
+            services.AddHttpClient("graph").AddStandardResilienceHandler(o => o.Retry.DisableForUnsafeHttpMethods());
+            services.AddHttpClient("google").AddStandardResilienceHandler(o => o.Retry.DisableForUnsafeHttpMethods());
+            services.AddSingleton<ICalendarProvider>(sp => new MicrosoftGraph.GraphCalendarProvider(
+                sp.GetRequiredService<IHttpClientFactory>().CreateClient("graph"), sp.GetRequiredService<MicrosoftGraph.MicrosoftSession>()));
+            services.AddSingleton<ICalendarProvider>(sp => new GoogleCalendar.GoogleCalendarProvider(
+                sp.GetRequiredService<IHttpClientFactory>().CreateClient("google"), sp.GetRequiredKeyedService<Auth.OAuthSession>(ProviderKind.Google)));
+        }
 
         // ICS-Abos fremder Kalender (immer read-only), auch im Demo-Modus.
         // RemoveAllLoggers: Der HttpClient würde sonst die geheime ICS-URL ins Log schreiben.
@@ -92,11 +106,56 @@ public static class ServiceCollectionExtensions
             .RemoveAllLoggers()
             .AddStandardResilienceHandler();
         services.AddSingleton<ICalendarProvider>(sp => sp.GetRequiredService<Ics.IcsCalendarProvider>());
+        return services;
+    }
+
+    /// <summary>
+    /// Anmeldungen: Microsoft (MSAL), Google und Strava (eigener OAuth-Ablauf über <see cref="Auth.LoopbackBrowser"/>).
+    /// Die App muss <see cref="IUrlLauncher"/> und <see cref="ISecureTokenStore"/> bereitstellen.
+    /// </summary>
+    private static void AddAccounts(IServiceCollection services, IConfiguration configuration)
+    {
+        if (services.Any(d => d.ServiceType == typeof(Auth.LoopbackBrowser)))
+        {
+            return;
+        }
+
+        // Token-Endpunkte bewusst OHNE automatische Wiederholung (Anmeldecodes sind nur einmal gültig).
+        services.AddHttpClient("oauth", c => c.Timeout = TimeSpan.FromSeconds(30));
+        services.AddSingleton<Auth.LoopbackBrowser>();
+        services.AddSingleton<MicrosoftGraph.MicrosoftSession>();
+
+        var google = configuration.GetSection(GoogleOptions.Section).Get<GoogleOptions>() ?? new GoogleOptions();
+        services.AddKeyedSingleton(ProviderKind.Google, (sp, _) =>
+        {
+            var factory = sp.GetRequiredService<IHttpClientFactory>();
+            return new Auth.OAuthSession(
+                GoogleCalendar.GoogleOAuth.Create(google.ClientId, google.ClientSecret),
+                factory.CreateClient("oauth"),
+                sp.GetRequiredService<Auth.LoopbackBrowser>(),
+                sp.GetRequiredService<ISecureTokenStore>(),
+                sp.GetRequiredService<IClock>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Auth.OAuthSession>>())
+            {
+                ResolveAccountName = (token, ct) => GoogleCalendar.GoogleOAuth.ResolveEmailAsync(factory.CreateClient("oauth"), token, ct),
+            };
+        });
+
+        var strava = configuration.GetSection(StravaOptions.Section).Get<StravaOptions>() ?? new StravaOptions();
+        services.AddKeyedSingleton(ProviderKind.Strava, (sp, _) => new Auth.OAuthSession(
+            StravaOAuth.Create(strava.ClientId, strava.ClientSecret),
+            sp.GetRequiredService<IHttpClientFactory>().CreateClient("oauth"),
+            sp.GetRequiredService<Auth.LoopbackBrowser>(),
+            sp.GetRequiredService<ISecureTokenStore>(),
+            sp.GetRequiredService<IClock>(),
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Auth.OAuthSession>>())
+        {
+            AccountNameFromTokenResponse = StravaOAuth.AthleteName,
+        });
 
         services.AddSingleton<IAccountConnector, MicrosoftGraph.MsalAccountConnector>();
-        services.AddSingleton<IAccountConnector, GoogleCalendar.GoogleAccountConnector>();
-        services.AddSingleton<IAccountConnector, StravaAccountConnector>();
-        return services;
+        services.AddSingleton<IAccountConnector>(sp => new Auth.OAuthAccountConnector(sp.GetRequiredKeyedService<Auth.OAuthSession>(ProviderKind.Google)));
+        services.AddSingleton<IAccountConnector>(sp => new Auth.OAuthAccountConnector(sp.GetRequiredKeyedService<Auth.OAuthSession>(ProviderKind.Strava)));
     }
 
     /// <summary>Strava (bzw. Demo-Aktivitäten) inkl. HttpClient mit Retry/Backoff/Timeout.</summary>
@@ -109,9 +168,12 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
-        services.AddHttpClient<IActivityProvider, StravaActivityProvider>((sp, client) =>
-                client.BaseAddress = sp.GetRequiredService<IOptions<StravaOptions>>().Value.BaseAddress)
+        AddAccounts(services, configuration);
+        services.AddHttpClient("strava", (sp, client) => client.BaseAddress = sp.GetRequiredService<IOptions<StravaOptions>>().Value.BaseAddress)
             .AddStandardResilienceHandler(); // Polly v8: Retry (exp. Backoff + Jitter, beachtet Retry-After), Circuit Breaker, Timeouts
+        services.AddSingleton<IActivityProvider>(sp => new StravaActivityProvider(
+            sp.GetRequiredService<IHttpClientFactory>().CreateClient("strava"),
+            sp.GetRequiredKeyedService<Auth.OAuthSession>(ProviderKind.Strava)));
         return services;
     }
 
