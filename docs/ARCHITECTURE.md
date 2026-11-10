@@ -50,7 +50,7 @@ flowchart LR
 |---|---|
 | `MicrosoftGraph/` | Stub (Phase 2): `GraphCalendarProvider`, `MsalAccountConnector` |
 | `GoogleCalendar/` | Stub (Phase 3): `GoogleCalendarProvider`, `GoogleAccountConnector` |
-| `Ics/` | Stub: `IcsCalendarProvider` (Fallback für Kollegen-Kalender, immer read-only) |
+| `Ics/` | `IcsParser` (Ical.Net: Serien, EXDATE/RECURRENCE-ID, Windows→IANA-Zeitzonen, Ganztags) und `IcsCalendarProvider` (Abos aus den Einstellungen, URL aus dem sicheren Speicher, immer read-only), fertig und getestet |
 | `Strava/` | Mapper fertig; Provider/Connector als Stub (Phase 5) |
 | `Markets/` | `FinnhubMarketDataProvider` (fertig, getestet), `DemoMarketDataProvider` |
 | `Export/` | `ExcelExportService` (ClosedXML), `CsvExportService` (CsvHelper), beide fertig |
@@ -89,6 +89,7 @@ und Jitter mit, beachtet `Retry-After` bei HTTP 429 (wichtig für Strava), und e
 | .NET | 10 (LTS), MAUI 10.0.110 | aktuell stabil, langer Support |
 | Persistenz | **sqlite-net-pcl 1.11** | schlank, auf iOS problemlos (kein EF-Interpreter-Modus nötig), Schema überschaubar. Ab 1.11 mit SQLitePCLRaw 3.x; das ältere `SQLitePCLRaw.bundle_green` 2.1.x enthält eine SQLite mit bekannter Sicherheitslücke |
 | Excel | **ClosedXML** (MIT) | EPPlus ab v5 steht unter Polyform Noncommercial bzw. kommerzieller Lizenz |
+| ICS | **Ical.Net 5** (MIT) mit NodaTime | RFC-5545-Serienlogik selbst zu bauen wäre fehleranfällig; Ical.Net kann RRULE, EXDATE, RECURRENCE-ID und Outlook-Zeitzonen |
 | CSV | CsvHelper | Standard, `;` als Trenner für Excel im deutschsprachigen Raum |
 | Marktdaten | **Finnhub** | 60 Req/min gratis, offizielle API. Contra: Free-Tier deckt vor allem US-Werte ab, Indizes daher über ETFs |
 | Assertions | FluentAssertions **7.x** | ab v8 kommerzielle Lizenz (Xceed); 7.x ist Apache-2.0 |
