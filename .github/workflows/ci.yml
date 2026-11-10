@@ -32,11 +32,10 @@ jobs:
       - name: Install MAUI workload (Windows only)
         run: dotnet workload install maui-windows
 
-      - name: Restore
-        run: dotnet restore LifeDashboard.slnx
-
+      # Kein separater "dotnet restore": Die MAUI-Windows-App braucht in Release das win-x64-Runtime-Pack,
+      # das nur ein Restore MIT Release-Konfiguration lädt (sonst NETSDK1112). Build restored daher selbst.
       - name: Build (Core, Infrastructure, Tests, App/Windows)
-        run: dotnet build LifeDashboard.slnx -c Release --no-restore
+        run: dotnet build LifeDashboard.slnx -c Release
 
       - name: Test
         run: dotnet test LifeDashboard.slnx -c Release --no-build --logger "trx;LogFileName=results.trx" --collect "XPlat Code Coverage"
