@@ -4,9 +4,9 @@
 Outlook und Google, spiegelt sie zwischen den eigenen Kalendern, holt Strava-Aktivitäten in den Kalender und
 zeigt einen Tages-Digest mit Märkten. Danach muss man nur noch in den Kalender schauen.
 
-> **Status: Phase 1 (Persistenz) abgeschlossen.** Die App läuft im Demo-Modus mit Beispieldaten. Sync-Engine, SQLite-Ledger
-> und gespeicherte Einstellungen sind fertig und getestet; die Anbindungen an Microsoft, Google und Strava folgen laut
-> [Roadmap](docs/ROADMAP.md).
+> **Status: Phase 2a (ICS-Abos) abgeschlossen.** Die App läuft im Demo-Modus mit Beispieldaten. Sync-Engine, SQLite-Ledger,
+> gespeicherte Einstellungen und echte ICS-Abos fremder Kalender sind fertig und getestet; die Anbindungen an Microsoft,
+> Google und Strava folgen laut [Roadmap](docs/ROADMAP.md).
 
 ## Schnellstart (Windows)
 ```bash
@@ -20,7 +20,7 @@ Voraussetzungen und iOS-Setup: [docs/SETUP.md](docs/SETUP.md).
 | # | Feature | Stand |
 |---|---|---|
 | F1 | Kalender-Sync Outlook ↔ Google (Spiegelung zwischen eigenen Kalendern) | Engine ✅, Anbieter ⏳ |
-| F2 | Kalender von Kollegen/Vorgesetzten **read-only** einblenden | Schutz ✅, Graph ⏳ |
+| F2 | Fremde Kalender (Kunden, Partner) **read-only** einblenden | ICS-Abo ✅ |
 | F3 | Strava → Kalender | Engine + Mapper ✅, API ⏳ |
 | F4 | On-Demand-Refresh mit Fortschritt und Protokoll | ✅ (Demo) |
 | F5 | Export Excel/CSV | Services ✅, UI teilweise |

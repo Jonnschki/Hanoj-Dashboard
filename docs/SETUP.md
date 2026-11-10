@@ -54,6 +54,11 @@ Werte eintragen und neu bauen. Die Datei wird beim Build als Ressource eingebett
 4. **API-Berechtigungen** (Microsoft Graph, *delegiert*): `User.Read`, `Calendars.ReadWrite`, `Calendars.Read.Shared`, `offline_access`.
 5. Die **Anwendungs-ID (Client-ID)** kommt in `appsettings.Local.json` → `Microsoft:ClientId`.
 
+> **Eigener Tenant (Selbstständige):** Bist du selbst Administrator deines Microsoft-365-Tenants, wähle als Kontotyp
+> „Nur Konten in diesem Organisationsverzeichnis“, trage die **Verzeichnis-ID** als `Microsoft:TenantId` ein und klicke
+> bei den API-Berechtigungen auf **„Administratorzustimmung erteilen“**. Die Tabelle unten ist dann nur noch für
+> Kalender von Personen in fremden Tenants relevant, und dafür ist das **ICS-Abo** (Abschnitt 3.5) der Weg.
+
 #### Kalender von Kollegen und Vorgesetzten: Strategie und Fallbacks
 Dein Arbeitgeber-Tenant entscheidet, ob du einer fremden App zustimmen darfst. Seit 2020 erlauben viele Tenants
 Benutzer-Zustimmung nur noch für Apps **verifizierter Herausgeber**, oder sie blockieren Drittanbieter-Apps ganz.
@@ -91,6 +96,26 @@ Zustimmung) bzw. **D** oder **E**. Alle fremden Kalender sind in der App unabhä
 2. In `appsettings.Local.json`: `MarketData:Provider = "Finnhub"`, `MarketData:ApiKey = "…"`.
 3. Free-Tier: ca. 60 Requests/Minute, vor allem US-Werte. Indizes daher über ETFs (`SPY` ≈ S&P 500, `QQQ` ≈ Nasdaq 100).
    Der Key wird im Header `X-Finnhub-Token` gesendet, nicht in der URL.
+
+### 3.5 Fremde Kalender per ICS-Abo (Kunden, Partner in anderen Firmen)
+Microsoft Graph erreicht nur Kalender im eigenen Tenant. Für Personen aus **anderen Firmen** veröffentlicht die andere
+Person ihren Kalender als ICS-Link, und du fügst den Link in der App unter **Einstellungen → Fremde Kalender (ICS-Abo)** ein.
+
+**Was die andere Person tun muss:**
+| Kalender | Schritte | Link |
+|---|---|---|
+| Outlook / Microsoft 365 | Outlook im Web → Einstellungen → Kalender → **Freigegebene Kalender** → „Kalender veröffentlichen“ → Kalender und Stufe wählen („Kann sehen, wann ich beschäftigt bin“ oder „… alle Details anzeigen“) → **Veröffentlichen** | den **ICS**-Link (nicht HTML) |
+| Google Kalender | Einstellungen → Kalender auswählen → **Kalender integrieren** | „Privatadresse im iCal-Format“ |
+| Apple iCloud | Kalender-App → Kalender teilen → „Öffentlicher Kalender“ | `webcal://…` |
+
+Hinweise:
+- Der Link ist ein **Geheimnis**: Wer ihn kennt, sieht den Kalender. Die App speichert ihn nur im sicheren Speicher
+  (Keychain / Credential Locker), zeigt ihn nach dem Einfügen nicht mehr an und schreibt ihn nie ins Log.
+- Akzeptiert werden nur `https://` und `webcal://`. Unverschlüsselte `http://`-Links werden abgelehnt.
+- In manchen Firmen-Tenants ist das Veröffentlichen von Kalendern vom Admin deaktiviert. Dann bleibt nur, um
+  Freigabe auf anderem Weg zu bitten.
+- Beim Hinzufügen testet die App den Link sofort und zeigt an, wie viele Termine in den nächsten 30 Tagen gefunden wurden.
+- Abonnierte Kalender sind **immer read-only** und werden nie gespiegelt. Sie erscheinen im Dashboard und in der Kalenderansicht.
 
 ## 4. iOS (iPhone 15) – was du mit dem Mac einrichten musst
 

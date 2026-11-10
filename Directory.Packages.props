@@ -29,6 +29,8 @@
     <PackageVersion Include="Google.Apis.Calendar.v3" Version="1.78.0.4320" />
     <!-- 1.11.x bringt SQLitePCLRaw 3.x mit aktueller SQLite mit. SQLitePCLRaw 2.1.x (bundle_green) hat eine bekannte Sicherheitslücke (GHSA-2m69-gcr7-jv3q). -->
     <PackageVersion Include="sqlite-net-pcl" Version="1.11.285" />
+    <!-- ICS/iCalendar (MIT), nutzt NodaTime (Apache-2.0) für Zeitzonen inkl. Windows-Namen aus Outlook. -->
+    <PackageVersion Include="Ical.Net" Version="5.2.4" />
     <PackageVersion Include="ClosedXML" Version="0.105.0" />
     <PackageVersion Include="CsvHelper" Version="33.1.0" />
   </ItemGroup>

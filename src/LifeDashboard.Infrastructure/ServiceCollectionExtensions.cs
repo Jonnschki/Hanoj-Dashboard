@@ -63,20 +63,35 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    /// <summary>Kalender-Provider und Login-Connectoren.</summary>
+    /// <summary>
+    /// Kalender-Provider und Login-Connectoren. Jeder Provider wird einzeln als <see cref="ICalendarProvider"/>
+    /// registriert; die SyncEngine bekommt alle über <c>IEnumerable&lt;ICalendarProvider&gt;</c>.
+    /// </summary>
     public static IServiceCollection AddCalendars(this IServiceCollection services, IConfiguration configuration)
     {
         var app = configuration.GetSection(AppOptions.Section).Get<AppOptions>() ?? new AppOptions();
         if (app.UseDemoData)
         {
-            services.AddSingleton<IReadOnlyList<ICalendarProvider>>(sp => DemoData.CreateCalendarProviders(sp.GetRequiredService<IClock>()));
-            services.AddSingleton<IEnumerable<ICalendarProvider>>(sp => sp.GetRequiredService<IReadOnlyList<ICalendarProvider>>());
+            services.AddSingleton(sp => new DemoCalendarSet(DemoData.CreateCalendarProviders(sp.GetRequiredService<IClock>())));
+            for (var i = 0; i < DemoData.ProviderCount; i++)
+            {
+                var index = i;
+                services.AddSingleton<ICalendarProvider>(sp => sp.GetRequiredService<DemoCalendarSet>().Providers[index]);
+            }
         }
-        else
-        {
-            // Phase 2/3: Provider werden pro verbundenem Konto über eine Account-Registry erzeugt.
-            services.AddSingleton<IEnumerable<ICalendarProvider>>(_ => []);
-        }
+
+        // Phase 2/3: Microsoft-/Google-Provider pro verbundenem Konto.
+
+        // ICS-Abos fremder Kalender (immer read-only), auch im Demo-Modus.
+        // RemoveAllLoggers: Der HttpClient würde sonst die geheime ICS-URL ins Log schreiben.
+        services.AddHttpClient<Ics.IcsCalendarProvider>(client =>
+            {
+                client.MaxResponseContentBufferSize = 10 * 1024 * 1024; // Schutz gegen riesige Antworten
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("LifeDashboard/0.1");
+            })
+            .RemoveAllLoggers()
+            .AddStandardResilienceHandler();
+        services.AddSingleton<ICalendarProvider>(sp => sp.GetRequiredService<Ics.IcsCalendarProvider>());
 
         services.AddSingleton<IAccountConnector, MicrosoftGraph.MsalAccountConnector>();
         services.AddSingleton<IAccountConnector, GoogleCalendar.GoogleAccountConnector>();

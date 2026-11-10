@@ -11,6 +11,9 @@ namespace LifeDashboard.Infrastructure.Demo;
 /// </summary>
 public static class DemoData
 {
+    /// <summary>Anzahl der Provider aus <see cref="CreateCalendarProviders"/>.</summary>
+    public const int ProviderCount = 2;
+
     public static IReadOnlyList<ICalendarProvider> CreateCalendarProviders(IClock clock)
     {
         ArgumentNullException.ThrowIfNull(clock);
@@ -38,6 +41,9 @@ public static class DemoData
         return new CalendarEvent(string.Empty, string.Empty, title, "Demo-Termin", null, new TimedSchedule(start, start.AddMinutes(durationMinutes), "Europe/Vienna"), EventVisibility.Normal, ShowAs.Busy, start);
     }
 }
+
+/// <summary>Hält die Demo-Provider als Singleton zusammen (gleiche Instanzen für alle Abfragen).</summary>
+public sealed record DemoCalendarSet(IReadOnlyList<ICalendarProvider> Providers);
 
 /// <summary>Demo-Aktivitäten statt Strava.</summary>
 public sealed class DemoActivityProvider(IClock clock) : IActivityProvider

@@ -136,6 +136,27 @@ public sealed partial class SettingsViewModel(
 
     public IReadOnlyList<MirrorDetailLevel> DetailLevels { get; } = Enum.GetValues<MirrorDetailLevel>();
 
+    /// <summary>Abonnierte ICS-Kalender fremder Firmen.</summary>
+    public ObservableCollection<IcsItem> IcsSubscriptions { get; } = [];
+
+    public IReadOnlyList<CalendarCategory> Categories { get; } = Enum.GetValues<CalendarCategory>();
+
+    [ObservableProperty]
+    public partial string NewIcsName { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string NewIcsUrl { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial CalendarCategory NewIcsCategory { get; set; } = CalendarCategory.Work;
+
+    [ObservableProperty]
+    public partial string IcsStatus { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AddIcsCommand))]
+    public partial bool IsAddingIcs { get; set; }
+
     /// <summary>Platzhalter im Watchlist-Feld: die Liste aus appsettings.json.</summary>
     public string WatchlistPlaceholder { get; } = string.Join(", ", marketOptions.Value.Watchlist);
 
@@ -178,6 +199,12 @@ public sealed partial class SettingsViewModel(
             }
         }
 
+        IcsSubscriptions.Clear();
+        foreach (var s in settings.IcsSubscriptions)
+        {
+            IcsSubscriptions.Add(IcsItem.From(s));
+        }
+
         SportTarget = SportTargets.FirstOrDefault(o => o.Id == sportTargetId);
         PrivateToWork = settings.PrivateWorkDetailLevel;
         DigestTime = settings.DigestTime.ToTimeSpan();
@@ -202,6 +229,44 @@ public sealed partial class SettingsViewModel(
         await sync.SaveUserSettingsAsync(updated);
         Watchlist = string.Join(", ", updated.Watchlist);
         Status = $"Gespeichert ({DateTime.Now:HH:mm}).";
+    }
+
+    private bool CanAddIcs() => !IsAddingIcs;
+
+    [RelayCommand(CanExecute = nameof(CanAddIcs))]
+    private async Task AddIcsAsync()
+    {
+        IsAddingIcs = true;
+        IcsStatus = "Link wird geprüft …";
+        try
+        {
+            var name = NewIcsName;
+            var result = await sync.AddIcsSubscriptionAsync(name, NewIcsUrl, NewIcsCategory);
+            if (result.IsFailure && result.Error.Code is "ics.url" or "ics.name")
+            {
+                IcsStatus = result.Error.Message; // Eingabefehler: nichts gespeichert
+                return;
+            }
+
+            NewIcsName = string.Empty;
+            NewIcsUrl = string.Empty; // Geheimen Link nicht im Eingabefeld stehen lassen
+            IcsStatus = result.IsSuccess
+                ? $"„{name.Trim()}“ hinzugefügt: {result.Value} Termine in den nächsten 30 Tagen."
+                : $"„{name.Trim()}“ gespeichert, aber der Abruf schlug fehl: {result.Error.Message}";
+            await LoadAsync();
+        }
+        finally
+        {
+            IsAddingIcs = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemoveIcsAsync(IcsItem item)
+    {
+        await sync.RemoveIcsSubscriptionAsync(item.Id);
+        IcsStatus = $"„{item.Name}“ entfernt.";
+        await LoadAsync();
     }
 
     [RelayCommand]

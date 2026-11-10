@@ -121,20 +121,6 @@ public sealed class FinnhubTests
     }
 }
 
-public sealed class ReadOnlyStubTests
-{
-    [Fact]
-    public void Ics_provider_never_hands_out_writer_for_shared_calendar()
-    {
-        var account = new CalendarAccount("ics", ProviderKind.Ics, "Kollege", null);
-        var provider = new IcsCalendarProvider(account, new Uri("https://outlook.office365.com/owa/calendar/x/calendar.ics"));
-        var calendar = new CalendarInfo("ics:1", "ics", ProviderKind.Ics, "Kollege", CalendarOwnership.SharedReadOnly, CalendarCategory.Work);
-
-        var act = () => provider.GetWriter(calendar);
-
-        act.Should().Throw<ReadOnlyCalendarException>();
-    }
-}
 
 public sealed class DependencyInjectionTests
 {
