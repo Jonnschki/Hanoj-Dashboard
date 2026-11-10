@@ -43,7 +43,7 @@ dotnet build src/LifeDashboard.App -p:EnableIos=true                       # iOS
 - **Keine Secrets im Repo.** Client-IDs und Keys gehören in `src/LifeDashboard.App/appsettings.Local.json` (gitignored). `appsettings.Example.json` ist die Vorlage.
 - Tokens nur über `ISecureTokenStore` (SecureStorage), nie loggen, nie in SQLite oder Preferences.
 - API-Keys in Headern senden, nicht in URLs (z. B. Finnhub `X-Finnhub-Token`).
-- Kein Scraping, nur offizielle APIs.
+- Kein Scraping, nur offizielle APIs. **Einzige bewusste Ausnahme** (Entscheidung des Nutzers): Yahoo-Finance-Chart-Endpunkt, gekapselt in `YahooFinanceMarketDataProvider` mit Finnhub-Fallback. News nur über offizielle RSS-Feeds, nur Schlagzeile/Kurztext/Link.
 
 ## Konventionen
 - **Conventional Commits**, ein Commit pro logischem Schritt: `feat(core): …`, `fix(app): …`, `test: …`, `docs: …`, `ci: …`, `chore: …`.

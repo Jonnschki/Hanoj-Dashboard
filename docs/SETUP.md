@@ -91,11 +91,24 @@ Zustimmung) bzw. **D** oder **E**. Alle fremden Kalender sind in der App unabhä
 3. `Client ID` und `Client Secret` kommen in `appsettings.Local.json` → `Strava`. Scope: `activity:read_all`.
 4. Rate-Limits (Standard): 100 Requests / 15 min, 1000 / Tag. Der Resilience-Handler wartet bei HTTP 429.
 
-### 3.4 Finnhub (Marktdaten)
+### 3.4 Börsendaten: Yahoo Finance + Finnhub (optional)
+**Yahoo Finance** ist die Standardquelle und braucht **keine Registrierung**. Sie deckt ATX, DAX, Euro Stoxx, US-Indizes,
+einzelne Aktien (z. B. `VOE.VI`, `SAP.DE`, `AAPL`) und Devisen (`EURUSD=X`) ab.
+> ⚠️ Yahoo bietet keine offizielle API. Die App nutzt den öffentlich erreichbaren Chart-Endpunkt. Das ist eine Grauzone
+> (Yahoo-Nutzungsbedingungen) und kann jederzeit brechen. Bewusst nur für den privaten Gebrauch.
+
+**Finnhub** (offizielle API) springt als Fallback ein, wenn Yahoo ausfällt oder ein Symbol nicht kennt. Optional:
 1. https://finnhub.io → kostenlos registrieren → API-Key kopieren.
-2. In `appsettings.Local.json`: `MarketData:Provider = "Finnhub"`, `MarketData:ApiKey = "…"`.
-3. Free-Tier: ca. 60 Requests/Minute, vor allem US-Werte. Indizes daher über ETFs (`SPY` ≈ S&P 500, `QQQ` ≈ Nasdaq 100).
-   Der Key wird im Header `X-Finnhub-Token` gesendet, nicht in der URL.
+2. In `appsettings.Local.json`: `MarketData:ApiKey = "…"` (Provider bleibt `"Yahoo"`). Nur Finnhub: `MarketData:Provider = "Finnhub"`.
+3. Free-Tier: ca. 60 Requests/Minute, vor allem US-Werte. Der Key wird im Header `X-Finnhub-Token` gesendet, nicht in der URL.
+
+Die Watchlist änderst du in der App unter **Einstellungen → Daily Digest & Watchlist** (Yahoo-Symbole, kommagetrennt).
+
+### 3.4b Schlagzeilen
+Keine Einrichtung nötig. Die App liest die offiziellen RSS-Feeds von Der Standard, Die Presse, ORF, Tagesschau, FAZ,
+Süddeutsche, Spiegel, Zeit, Handelsblatt, NZZ, Politico Europe, Financial Times, The Guardian und BBC
+(Liste: `src/LifeDashboard.Infrastructure/News/NewsFeedCatalog.cs`). Angezeigt werden nur Schlagzeile, Kurztext und Link,
+und ein Tipp öffnet den Originalartikel im Browser.
 
 ### 3.5 Fremde Kalender per ICS-Abo (Kunden, Partner in anderen Firmen)
 Microsoft Graph erreicht nur Kalender im eigenen Tenant. Für Personen aus **anderen Firmen** veröffentlicht die andere

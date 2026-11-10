@@ -5,6 +5,7 @@
 | 0 | **Skelett**: Solution, Struktur, DI, Navigation, Platzhalter-UI, Tests-Gerüst, CI, Doku | ✅ erledigt |
 | 1 | **Persistenz & Ledger**: `SqliteSyncLedger` (sqlite-net-pcl), Migrationen, Einstellungen speichern (Kalenderauswahl, Regeln, Sport-Zielkalender, Watchlist, Digest-Uhrzeit), Sync-Run-Historie | ✅ erledigt |
 | 2a | **Fremde Kalender per ICS-Abo** (read-only): Parser (Serien, Zeitzonen, Ganztags), Provider, Verwaltung in den Einstellungen, Link nur im sicheren Speicher | ✅ erledigt |
+| 2c | **Börse + News**: Yahoo Finance mit Finnhub-Fallback, Schlagzeilen aus offiziellen RSS-Feeds (AT/DE/EU/international) mit Relevanz-Ranking | ✅ erledigt |
 | 2b | **Microsoft-Auth + Outlook lesen**: MSAL (System-Browser, Token-Cache in SecureStorage), eigene Kalender via Graph (eigener Tenant, Admin-Zustimmung selbst erteilt) | ⏳ wartet auf App-Registrierung |
 | 3 | **Google-Auth + Google Calendar** lesen/schreiben (OAuth Code + PKCE, `extendedProperties.private`) | ⏳ |
 | 4 | **Sync-Engine produktiv**: Graph/Google-Writer mit Marker, Dry-Run-Bestätigungsdialog für Löschungen, Einzelabfrage vor Löschung | ⏳ |
