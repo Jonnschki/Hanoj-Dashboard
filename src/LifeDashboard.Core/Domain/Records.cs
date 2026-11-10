@@ -76,7 +76,8 @@ public enum LedgerStatus
 /// <param name="TargetCalendarId">Zielkalender.</param>
 /// <param name="TargetEventId">ID der Spiegelung im Zielkalender.</param>
 /// <param name="SyncHash">Hash des zuletzt geschriebenen Inhalts.</param>
-/// <param name="LastSyncedUtc">Zeitpunkt des letzten Schreibens.</param>
+/// <param name="TargetLastModifiedUtc">Server-Änderungszeitpunkt der Spiegelung direkt nach unserem Schreiben (Konflikterkennung).</param>
+/// <param name="LastSyncedUtc">Lokaler Zeitpunkt des letzten Schreibens (nur Info).</param>
 /// <param name="Status">Status.</param>
 public sealed record LedgerEntry(
     string OriginKey,
@@ -87,5 +88,6 @@ public sealed record LedgerEntry(
     string TargetCalendarId,
     string TargetEventId,
     string SyncHash,
+    DateTimeOffset TargetLastModifiedUtc,
     DateTimeOffset LastSyncedUtc,
     LedgerStatus Status);

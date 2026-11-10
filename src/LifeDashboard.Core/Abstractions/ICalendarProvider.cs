@@ -35,6 +35,12 @@ public interface ICalendarProvider
     ICalendarWriter GetWriter(CalendarInfo calendar);
 }
 
+/// <summary>
+/// Quittung eines Schreibvorgangs. <see cref="LastModifiedUtc"/> stammt vom SERVER (nicht von der lokalen Uhr)
+/// und dient später zur Erkennung manueller Änderungen an der Spiegelung.
+/// </summary>
+public sealed record WriteReceipt(string EventId, DateTimeOffset LastModifiedUtc);
+
 /// <summary>Schreibzugriff auf genau einen eigenen Kalender.</summary>
 public interface ICalendarWriter
 {
@@ -42,11 +48,12 @@ public interface ICalendarWriter
     CalendarInfo Calendar { get; }
 
     /// <summary>Legt einen Termin an. Der Herkunftsmarker (<see cref="CalendarEvent.Origin"/>) muss mitgespeichert werden.</summary>
-    /// <returns>Native ID des neuen Termins.</returns>
-    Task<Result<string>> CreateAsync(CalendarEvent calendarEvent, CancellationToken cancellationToken = default);
+    /// <returns>ID und serverseitiger Änderungszeitpunkt des neuen Termins.</returns>
+    Task<Result<WriteReceipt>> CreateAsync(CalendarEvent calendarEvent, CancellationToken cancellationToken = default);
 
     /// <summary>Aktualisiert einen bestehenden Termin inklusive Herkunftsmarker.</summary>
-    Task<Result> UpdateAsync(string eventId, CalendarEvent calendarEvent, CancellationToken cancellationToken = default);
+    /// <returns>ID und serverseitiger Änderungszeitpunkt nach dem Update.</returns>
+    Task<Result<WriteReceipt>> UpdateAsync(string eventId, CalendarEvent calendarEvent, CancellationToken cancellationToken = default);
 
     /// <summary>Löscht einen Termin.</summary>
     Task<Result> DeleteAsync(string eventId, CancellationToken cancellationToken = default);
