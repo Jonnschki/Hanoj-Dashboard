@@ -1,65 +1,163 @@
 using LifeDashboard.Core.Abstractions;
 using LifeDashboard.Core.Domain;
+using SQLite;
 
 namespace LifeDashboard.Infrastructure.Persistence;
 
-/// <summary>
-/// SQLite-Schema des Ledgers (Phase 1, sqlite-net-pcl).
-/// Migrationsstrategie: Tabelle SchemaVersion + nummerierte, nur vorwärts laufende Migrationsschritte.
-/// Siehe docs/SYNC_DESIGN.md.
-/// </summary>
-public static class LedgerSchema
+/// <summary>Sync-Ledger und Lauf-Historie in SQLite. Schema: <see cref="DatabaseSchema"/>.</summary>
+public sealed class SqliteSyncLedger(SqliteDatabase database) : ISyncLedger
 {
-    public const int CurrentVersion = 1;
+    private const string LedgerColumns =
+        "OriginKey, TargetCalendarId, OriginProvider, SourceCalendarId, OriginNativeId, OriginStartUtcTicks, TargetEventId, SyncHash, TargetLastModifiedUtcTicks, LastSyncedUtcTicks, Status";
 
-    /// <summary>Migrationen in Reihenfolge. Index + 1 = Zielversion. Bestehende Einträge NIE ändern, nur anhängen.</summary>
-    public static readonly IReadOnlyList<string> Migrations =
-    [
-        """
-        CREATE TABLE IF NOT EXISTS SchemaVersion (Version INTEGER NOT NULL);
-        CREATE TABLE IF NOT EXISTS Ledger (
-            OriginKey             TEXT    NOT NULL,
-            TargetCalendarId      TEXT    NOT NULL,
-            OriginProvider        TEXT    NOT NULL,
-            SourceCalendarId      TEXT    NULL,
-            OriginNativeId        TEXT    NOT NULL,
-            OriginStartUtc        INTEGER NOT NULL,
-            TargetEventId         TEXT    NOT NULL,
-            SyncHash              TEXT    NOT NULL,
-            TargetLastModifiedUtc INTEGER NOT NULL,
-            LastSyncedUtc         INTEGER NOT NULL,
-            Status                TEXT    NOT NULL,
-            PRIMARY KEY (OriginKey, TargetCalendarId)
-        );
-        CREATE INDEX IF NOT EXISTS IX_Ledger_Target ON Ledger (TargetCalendarId, TargetEventId);
-        CREATE INDEX IF NOT EXISTS IX_Ledger_Source ON Ledger (SourceCalendarId);
-        CREATE TABLE IF NOT EXISTS SyncRun (
-            Id TEXT PRIMARY KEY, StartedUtc INTEGER NOT NULL, FinishedUtc INTEGER NULL, DryRun INTEGER NOT NULL,
-            Status TEXT NOT NULL, Created INTEGER NOT NULL, Updated INTEGER NOT NULL, Deleted INTEGER NOT NULL,
-            Conflicts INTEGER NOT NULL, Errors INTEGER NOT NULL
-        );
-        """,
-    ];
-}
+    public async Task<LedgerEntry?> FindAsync(string originKey, string targetCalendarId, CancellationToken cancellationToken = default)
+    {
+        var db = await database.GetConnectionAsync().ConfigureAwait(false);
+        var rows = await db.QueryAsync<LedgerRow>(
+            $"SELECT {LedgerColumns} FROM Ledger WHERE OriginKey = ? AND TargetCalendarId = ?", originKey, targetCalendarId).ConfigureAwait(false);
+        return rows.Select(ToEntry).FirstOrDefault();
+    }
 
-/// <summary>SQLite-Ledger. STUB – Umsetzung in Phase 1. Bis dahin nutzt die App <c>InMemorySyncLedger</c>.</summary>
-public sealed class SqliteSyncLedger(string databasePath) : ISyncLedger
-{
-    private const string Phase = "SQLite-Ledger wird in Phase 1 implementiert.";
+    public async Task<LedgerEntry?> FindByTargetEventAsync(string targetCalendarId, string targetEventId, CancellationToken cancellationToken = default)
+    {
+        var db = await database.GetConnectionAsync().ConfigureAwait(false);
+        var rows = await db.QueryAsync<LedgerRow>(
+            $"SELECT {LedgerColumns} FROM Ledger WHERE TargetCalendarId = ? AND TargetEventId = ? LIMIT 1", targetCalendarId, targetEventId).ConfigureAwait(false);
+        return rows.Select(ToEntry).FirstOrDefault();
+    }
 
-    public string DatabasePath { get; } = databasePath;
+    public async Task<IReadOnlyList<LedgerEntry>> GetBySourceCalendarAsync(string sourceCalendarId, CancellationToken cancellationToken = default)
+    {
+        var db = await database.GetConnectionAsync().ConfigureAwait(false);
+        var rows = await db.QueryAsync<LedgerRow>(
+            $"SELECT {LedgerColumns} FROM Ledger WHERE SourceCalendarId = ?", sourceCalendarId).ConfigureAwait(false);
+        return rows.Select(ToEntry).ToList();
+    }
 
-    public Task<LedgerEntry?> FindAsync(string originKey, string targetCalendarId, CancellationToken cancellationToken = default) => throw new NotImplementedException(Phase);
+    public async Task UpsertAsync(LedgerEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        var db = await database.GetConnectionAsync().ConfigureAwait(false);
+        await db.ExecuteAsync(
+            $"INSERT OR REPLACE INTO Ledger ({LedgerColumns}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            entry.OriginKey,
+            entry.TargetCalendarId,
+            entry.OriginProvider.ToString(),
+            entry.SourceCalendarId,
+            entry.OriginNativeId,
+            entry.OriginStartUtc.UtcTicks,
+            entry.TargetEventId,
+            entry.SyncHash,
+            entry.TargetLastModifiedUtc.UtcTicks,
+            entry.LastSyncedUtc.UtcTicks,
+            entry.Status.ToString()).ConfigureAwait(false);
+    }
 
-    public Task<LedgerEntry?> FindByTargetEventAsync(string targetCalendarId, string targetEventId, CancellationToken cancellationToken = default) => throw new NotImplementedException(Phase);
+    public async Task RemoveAsync(string originKey, string targetCalendarId, CancellationToken cancellationToken = default)
+    {
+        var db = await database.GetConnectionAsync().ConfigureAwait(false);
+        await db.ExecuteAsync("DELETE FROM Ledger WHERE OriginKey = ? AND TargetCalendarId = ?", originKey, targetCalendarId).ConfigureAwait(false);
+    }
 
-    public Task<IReadOnlyList<LedgerEntry>> GetBySourceCalendarAsync(string sourceCalendarId, CancellationToken cancellationToken = default) => throw new NotImplementedException(Phase);
+    public async Task AddRunAsync(SyncRunRecord run, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        var db = await database.GetConnectionAsync().ConfigureAwait(false);
+        await db.ExecuteAsync(
+            "INSERT OR REPLACE INTO SyncRun (Id, StartedUtcTicks, FinishedUtcTicks, DryRun, Status, Created, Updated, Deleted, Conflicts, Errors) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            run.Id.ToString(),
+            run.StartedUtc.UtcTicks,
+            run.FinishedUtc?.UtcTicks,
+            run.DryRun ? 1 : 0,
+            run.Status.ToString(),
+            run.Created,
+            run.Updated,
+            run.Deleted,
+            run.Conflicts,
+            run.Errors).ConfigureAwait(false);
+    }
 
-    public Task UpsertAsync(LedgerEntry entry, CancellationToken cancellationToken = default) => throw new NotImplementedException(Phase);
+    public async Task<IReadOnlyList<SyncRunRecord>> GetRecentRunsAsync(int count, CancellationToken cancellationToken = default)
+    {
+        var db = await database.GetConnectionAsync().ConfigureAwait(false);
+        var rows = await db.QueryAsync<SyncRunRow>(
+            "SELECT Id, StartedUtcTicks, FinishedUtcTicks, DryRun, Status, Created, Updated, Deleted, Conflicts, Errors FROM SyncRun ORDER BY StartedUtcTicks DESC LIMIT ?", count).ConfigureAwait(false);
+        return rows.Select(r => new SyncRunRecord(
+            Guid.Parse(r.Id),
+            FromTicks(r.StartedUtcTicks),
+            r.FinishedUtcTicks is { } f ? FromTicks(f) : null,
+            r.DryRun != 0,
+            Enum.Parse<SyncRunStatus>(r.Status),
+            r.Created,
+            r.Updated,
+            r.Deleted,
+            r.Conflicts,
+            r.Errors)).ToList();
+    }
 
-    public Task RemoveAsync(string originKey, string targetCalendarId, CancellationToken cancellationToken = default) => throw new NotImplementedException(Phase);
+    private static LedgerEntry ToEntry(LedgerRow r) => new(
+        r.OriginKey,
+        Enum.Parse<ProviderKind>(r.OriginProvider),
+        r.SourceCalendarId,
+        r.OriginNativeId,
+        FromTicks(r.OriginStartUtcTicks),
+        r.TargetCalendarId,
+        r.TargetEventId,
+        r.SyncHash,
+        FromTicks(r.TargetLastModifiedUtcTicks),
+        FromTicks(r.LastSyncedUtcTicks),
+        Enum.Parse<LedgerStatus>(r.Status));
 
-    public Task AddRunAsync(SyncRunRecord run, CancellationToken cancellationToken = default) => throw new NotImplementedException(Phase);
+    private static DateTimeOffset FromTicks(long ticks) => new(ticks, TimeSpan.Zero);
 
-    public Task<IReadOnlyList<SyncRunRecord>> GetRecentRunsAsync(int count, CancellationToken cancellationToken = default) => throw new NotImplementedException(Phase);
+    // Zeilenklassen für sqlite-net (Spaltennamen = Property-Namen). [Preserve] schützt sie vor dem iOS-Linker.
+    [Preserve(AllMembers = true)]
+    internal sealed class LedgerRow
+    {
+        public string OriginKey { get; set; } = string.Empty;
+
+        public string TargetCalendarId { get; set; } = string.Empty;
+
+        public string OriginProvider { get; set; } = string.Empty;
+
+        public string? SourceCalendarId { get; set; }
+
+        public string OriginNativeId { get; set; } = string.Empty;
+
+        public long OriginStartUtcTicks { get; set; }
+
+        public string TargetEventId { get; set; } = string.Empty;
+
+        public string SyncHash { get; set; } = string.Empty;
+
+        public long TargetLastModifiedUtcTicks { get; set; }
+
+        public long LastSyncedUtcTicks { get; set; }
+
+        public string Status { get; set; } = string.Empty;
+    }
+
+    [Preserve(AllMembers = true)]
+    internal sealed class SyncRunRow
+    {
+        public string Id { get; set; } = string.Empty;
+
+        public long StartedUtcTicks { get; set; }
+
+        public long? FinishedUtcTicks { get; set; }
+
+        public int DryRun { get; set; }
+
+        public string Status { get; set; } = string.Empty;
+
+        public int Created { get; set; }
+
+        public int Updated { get; set; }
+
+        public int Deleted { get; set; }
+
+        public int Conflicts { get; set; }
+
+        public int Errors { get; set; }
+    }
 }

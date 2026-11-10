@@ -27,7 +27,8 @@ public static class MauiProgram
         AddConfiguration(builder.Configuration);
 
         // Alle Module aus Core/Infrastructure (siehe ServiceCollectionExtensions).
-        builder.Services.AddLifeDashboard(builder.Configuration);
+        // SQLite-Datei im App-Datenordner (Windows: %LOCALAPPDATA%\…, iOS: Library-Ordner der App, wird gesichert).
+        builder.Services.AddLifeDashboard(builder.Configuration, Path.Combine(FileSystem.AppDataDirectory, "lifedashboard.db3"));
 
         // Plattformspezifische Dienste.
         builder.Services.AddSingleton<ISecureTokenStore, MauiSecureTokenStore>();
